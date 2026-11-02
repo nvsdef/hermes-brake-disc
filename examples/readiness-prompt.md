@@ -1,0 +1,2 @@
+READINESS CHECK ONLY - do not create geometry, launch SolidWorks/Ansys, or submit jobs. As the lead (AGENTS.md), list the mcp_solidpilot and mcp_ansys tools you can see and the delegation budget, then delegate_task one child per role (goal starting "ROLE: <role>") that loads its SOUL and skills and replies with its role, the skills it loaded, and the MCP tools it can see.
+Report a table of results and any blocker; do not impersonate a role that failed to start.

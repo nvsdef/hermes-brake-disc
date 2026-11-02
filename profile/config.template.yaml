@@ -1,0 +1,265 @@
+# Hermes "brake" profile config.yaml - TEMPLATE (PRD H1.2)
+# Do not copy by hand. Render it with scripts/install_profile.ps1, which fills the
+# {{...}} placeholders for this workstation and writes <profile>/config.yaml.
+# H1.2 config, authored 2026-09-30 after run 1 (run 1 itself used the H1.1 profile).
+# Rendered and checked by scripts/preflight.ps1 on the author's workstation 2026-11-02.
+# Lines marked "# BRAKE" differ from a default Hermes profile.
+# Fixed conventions (the skills hard-code these, so they are NOT placeholders):
+#   SolidPilot at C:/solidpilot   run output in C:/brake-runs
+model:
+  default: nvidia/nvidia/nemotron-3-ultra-nvfp4
+  provider: custom:Inference-api.nvidia.com
+  base_url: https://inference-api.nvidia.com/v1
+  api_mode: chat_completions
+database:
+  journal_mode: wal
+runtime:
+  nofile_soft_limit: 4096
+agent:
+  max_turns: 1000                      # BRAKE: long gated run (was 500)
+  verbose: false
+  reasoning_effort: high               # BRAKE: was medium
+  personalities: {}
+terminal:
+  backend: local
+  cwd: "{{PACKAGE_ROOT}}"   # BRAKE
+  timeout: 180
+  home_mode: auto
+  container_cpu: 1
+  container_memory: 5120
+  container_disk: 51200
+  container_persistent: true
+  docker_mount_cwd_to_workspace: false
+  lifetime_seconds: 300
+browser:
+  backend: browser-use
+  inactivity_timeout: 120
+tool_loop_guardrails:
+  warnings_enabled: true
+  hard_stop_enabled: true
+  warn_after:
+    exact_failure: 2
+    same_tool_failure: 3
+    idempotent_no_progress: 2
+  hard_stop_after:
+    exact_failure: 5
+    same_tool_failure: 8
+    idempotent_no_progress: 5
+compression:
+  enabled: true
+  progress_notices: false
+  threshold: 0.8
+  target_ratio: 0.2
+  protect_last_n: 30
+  min_tail_user_messages: 1
+  max_attempts: 3
+  proactive_prune_tokens: 0
+  proactive_prune_min_result_chars: 8000
+  proactive_prune_min_reclaim_tokens: 4096
+  protect_first_n: 3
+  codex_gpt55_autoraise: true
+  codex_app_server_auto: native
+  codex_responses_native: false
+  codex_responses_compact_threshold: 200000
+  idle_compact_after_seconds: 0
+prompt_caching:
+  cache_ttl: 5m
+display:
+  compact: false
+  busy_input_mode: interrupt
+  bell_on_complete: false
+  show_reasoning: false
+  background_process_notifications: all
+  streaming: true
+  skin: default
+  interim_assistant_messages: true
+  tool_progress: all
+  cleanup_progress: false
+  long_running_notifications: true
+  busy_ack_detail: true
+stt:
+  enabled: true
+  language: en
+  local:
+    model: base
+  openai:
+    model: whisper-1
+    language: ''
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200
+  user_char_limit: 1375
+  nudge_interval: 10
+  flush_min_turns: 6
+delegation:
+  max_iterations: 600
+  max_concurrent_children: 1
+  oneshot_max_children: 0
+  child_timeout_seconds: 0             # BRAKE: explicit, no wall cap
+skills:
+  external_dirs:                       # BRAKE: brake skills only
+    - "{{PACKAGE_ROOT}}/agents/lead/skills"
+    - "{{PACKAGE_ROOT}}/agents/solidworks-engineer/skills"
+    - "{{PACKAGE_ROOT}}/agents/spaceclaim-engineer/skills"
+    - "{{PACKAGE_ROOT}}/agents/fluent-engineer/skills"
+    - "{{PACKAGE_ROOT}}/agents/_shared/skills"
+  creation_nudge_interval: 0
+approvals:
+  timeout: 900
+  mcp_reload_confirm: true
+command_allowlist:
+  - execute_code
+  - script execution via -e/-c flag
+kanban:
+  review_dispatch: true
+code_execution:
+  timeout: 300
+  max_tool_calls: 50
+tools:
+  tool_search:
+    enabled: 'off'
+streaming:
+  enabled: false
+onboarding:
+  seen:
+    tool_progress_prompt: true
+telemetry:
+  shared_metrics:
+    enabled: false
+updates:
+  pre_update_backup: false
+  backup_keep: 5
+  non_interactive_local_changes: stash
+_config_version: 34
+session_reset:
+  mode: none
+  idle_minutes: 1440
+  at_hour: 4
+group_sessions_per_user: true
+platform_toolsets:
+  cli:
+    - clarify
+    - code_execution                   # BRAKE: execute_code for arithmetic (no Windows python stub)
+    - delegation                       # BRAKE: required for delegate_task
+    - file
+    - skills
+    - terminal
+    - todo
+    - vision
+  telegram:
+    - hermes-telegram
+  discord:
+    - hermes-discord
+  whatsapp:
+    - hermes-whatsapp
+  slack:
+    - hermes-slack
+  signal:
+    - hermes-signal
+  homeassistant:
+    - hermes-homeassistant
+  qqbot:
+    - hermes-qqbot
+  yuanbao:
+    - hermes-yuanbao
+  teams:
+    - hermes-teams
+  google_chat:
+    - hermes-google_chat
+custom_providers:
+  - name: Inference-api.nvidia.com
+    base_url: https://inference-api.nvidia.com/v1
+    key_env: HERMES_CUSTOM_INFERENCE_API_NVIDIA_COM_API_KEY
+    discover_models: true
+    models:
+      nvidia/nvidia/nemotron-3-ultra: {}
+      nvidia/nvidia/nemotron-3-ultra-nvfp4: {}
+      nvidia/nvidia/nemotron-3-super-v3: {}
+      nvidia/nvidia/nemotron-3.5-super-text-preview: {}
+      nvidia/qwen/qwen3.5-122b-a10b: {}
+      nvidia/deepseek-ai/deepseek-v4-pro: {}
+      nvidia/moonshotai/kimi-k2.7: {}
+      nvidia/zai-org/glm-5.3: {}
+      nvidia/openai/gpt-oss-120b: {}
+      azure/anthropic/claude-opus-5-5: {}
+      azure/anthropic/claude-sonnet-5: {}
+      azure/openai/gpt-5.5: {}
+    models_discovered: false           # BRAKE: short list above; Hermes rediscovers the rest
+mcp_servers:
+  solidpilot:
+    command: C:/solidpilot/.venv/Scripts/python.exe
+    args:
+      - C:/solidpilot/adapters/claude/server.py
+    cwd: C:/solidpilot/adapters/claude   # BRAKE
+    env:
+      PYTHONIOENCODING: utf-8
+    connect_timeout: 60.0
+    enabled: true
+    timeout: 300
+    supports_parallel_tool_calls: false
+    tools:                               # BRAKE H1.2: only the 17 tools the skills use (smaller prompt, faster turns)
+      include:
+        - ensure_ready
+        - verify_state
+        - open_new_part
+        - add_reference_geometry
+        - create_sketch
+        - add_sketch_entities
+        - extrude_feature
+        - analyze_model
+        - edit_feature
+        - save_document
+        - open_new_assembly
+        - insert_component
+        - analyze_assembly
+        - export_document
+        - open_document
+        - activate_document
+        - close_document
+  ansys:
+    command: "{{ANSYS_AGENT_ROOT}}/.venv/Scripts/python.exe"
+    args:
+      - "{{ANSYS_AGENT_ROOT}}/ansys_mcp_server.py"
+    cwd: C:/brake-runs                   # BRAKE: keep Ansys scratch out of OneDrive
+    env:
+      ANSYS_RUNTIME_DIR: C:/brake-runs/_ansys-runtime   # BRAKE
+      ANSYS_VENV_PYTHON: "{{ANSYS_AGENT_ROOT}}/.venv/Scripts/python.exe"
+      AWP_ROOT261: "{{AWP_ROOT261}}"
+      PYTHONIOENCODING: utf-8
+    connect_timeout: 60.0
+    enabled: true
+    timeout: 300
+    supports_parallel_tool_calls: false
+known_plugin_toolsets:
+  cli:
+    - spotify
+known_builtin_toolsets:
+  cli:
+    - bfl
+    - browser
+    - clarify
+    - code_execution
+    - computer_use
+    - context_engine
+    - cronjob
+    - delegation
+    - discord
+    - discord_admin
+    - file
+    - homeassistant
+    - image_gen
+    - memory
+    - session_search
+    - skills
+    - spotify
+    - stt
+    - terminal
+    - todo
+    - tts
+    - video
+    - video_gen
+    - vision
+    - web
+    - x_search
+    - yuanbao

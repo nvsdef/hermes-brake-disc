@@ -1,0 +1,1600 @@
+{
+ "server": "solidpilot",
+ "captured": "2026-09-21",
+ "revalidated": "2026-11-02",
+ "revalidation": "names, required args and property names compared against the live server",
+ "tool_count": 46,
+ "tools": [
+  {
+   "name": "ensure_ready",
+   "description": "Bring the SolidWorks environment up and confirm it is ready to use.\n\nStarts the execution server if it isn't running, and launches SolidWorks if it is closed\n(just attaches if it's already open). Does NOT open or create any document — use\nopen_new_part / create_drawing for that (so assembly/drawing workflows aren't forced into a\npart). Safe to call anytime; idempotent. Call this first at the start of a session, or\nwhenever a tool fails with a connection / COM-attach error.",
+   "input_schema": {
+    "properties": {},
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "open_new_part",
+   "description": "Open a new SolidWorks part document.",
+   "input_schema": {
+    "properties": {
+     "template_path": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "open_document",
+   "description": "Open an EXISTING document from disk (counterpart to open_new_part, which makes a BLANK doc).\nfile_path: full path to the file.\n  - Native .sldprt / .sldasm / .slddrw open directly.\n  - Foreign .step / .iges / .x_t / NX .prt / .ipt / .CATPart import via a STAGED path: the\n    CLASSIC translator (LoadFile4) first — proven for STEP/IGES and NX .prt — with a\n    3D-Interconnect retry as the last resort. A clear OPEN_FAILED means no usable translator:\n    convert to STEP or defer that file.\n  - as_assembly=True (foreign files only): the file is an ASSEMBLY STEP — the classic import\n    would flatten it to a MULTIBODY PART; this asks for a real assembly import instead.\nMakes the opened document active and bumps state_version.",
+   "input_schema": {
+    "properties": {
+     "file_path": {
+      "type": "string"
+     },
+     "as_assembly": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "file_path"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "open_new_assembly",
+   "description": "Open a new blank SolidWorks ASSEMBLY document (the twin of open_new_part).\nUse before insert_component / add_mate. template_path: optional .asmdot template\n(default: the user-configured assembly template).",
+   "input_schema": {
+    "properties": {
+     "template_path": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "analyze_assembly",
+   "description": "Analyze the active ASSEMBLY document (read-only, does NOT change state).\nanalysis_type='components': top-level component occurrences in FEATURE-TREE order — per\n    instance: name (instance-numbered, e.g. 'Shaft-1'), source file path, config, fixed /\n    suppressed flags, children count (a subassembly — out of scope, recorded as a gap), and\n    the FULL transform (13 numbers: 3x3 rotation row-major + translation in meters + scale)\n    — the position ground truth for round-trip verification.\nanalysis_type='components_flat': LEAF occurrences across ALL nesting levels (depth-first\n    tree order, transforms in ROOT space, each with its parent's name) — flattens a\n    wrapper/subassembly level for ground-truth acquisition; the IR itself stays flat.\nanalysis_type='mates': all mates in CREATION order — type and alignment from the SolidWorks\n    ENUMS (locale-proof), the SI value for distance/angle mates, and per mate entity: owning\n    component, entity kind (plane/cylinder/circle/...), and its geometric params in ASSEMBLY\n    space (location + direction + radii).\nanalysis_type='faces' / 'edges': ONE component's face/edge list with stable indices — feeds\n    add_mate's index-based entity selection. Requires `component` (the Name2 from\n    'components'). Coordinates are COMPONENT-LOCAL (the payload carries the transform).",
+   "input_schema": {
+    "properties": {
+     "analysis_type": {
+      "enum": [
+       "components",
+       "components_flat",
+       "mates",
+       "faces",
+       "edges"
+      ],
+      "type": "string"
+     },
+     "component": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "required": [
+     "analysis_type"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "insert_component",
+   "description": "Insert a part file as a component of the ACTIVE assembly (open_new_assembly first).\nfile_path: the .SLDPRT to insert (meters for all coordinates).\nx/y/z: insertion point — used when transform_json is not given.\ntransform_json: OPTIONAL full placement as a JSON array STRING of 13 numbers\n    (3x3 rotation row-major + translation xyz + scale — exactly the layout\n    analyze_assembly(components) reports). Needed for rotated placements.\nfixed: True fixes the occurrence (its transform becomes authoritative); False leaves it\n    floating for mates to position. The state is applied explicitly either way.\nReturns the runtime component name (e.g. 'Shaft-2') + fixed/transform readbacks.",
+   "input_schema": {
+    "properties": {
+     "file_path": {
+      "type": "string"
+     },
+     "x": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "y": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "z": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "config": {
+      "default": "",
+      "type": "string"
+     },
+     "fixed": {
+      "default": false,
+      "type": "boolean"
+     },
+     "transform_json": {
+      "default": "[]",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file_path"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_mate",
+   "description": "Add a mate between two component entities in the ACTIVE assembly.\nEntity selection is INDEX-based (robust — coordinate picks miss real geometry): each side is\n(component name from analyze_assembly(components), kind 'face'|'edge', index from\nanalyze_assembly(faces|edges, component=...)).\nvalue: METERS for distance mates, DEGREES for angle mates (ignored otherwise).\nalignment 'closest' lets SolidWorks pick the nearer solution; the mates reader reports the\nRESOLVED alignment afterwards.\nReturns the mate name + both components' post-rebuild transforms — compare against the\noriginal's readback after EVERY mate (the stop-check discipline).",
+   "input_schema": {
+    "properties": {
+     "mate_type": {
+      "enum": [
+       "coincident",
+       "concentric",
+       "perpendicular",
+       "parallel",
+       "tangent",
+       "distance",
+       "angle",
+       "lock"
+      ],
+      "type": "string"
+     },
+     "a_component": {
+      "type": "string"
+     },
+     "a_index": {
+      "type": "integer"
+     },
+     "b_component": {
+      "type": "string"
+     },
+     "b_index": {
+      "type": "integer"
+     },
+     "a_kind": {
+      "default": "face",
+      "enum": [
+       "face",
+       "edge"
+      ],
+      "type": "string"
+     },
+     "b_kind": {
+      "default": "face",
+      "enum": [
+       "face",
+       "edge"
+      ],
+      "type": "string"
+     },
+     "alignment": {
+      "default": "closest",
+      "enum": [
+       "aligned",
+       "anti_aligned",
+       "closest"
+      ],
+      "type": "string"
+     },
+     "flip": {
+      "default": false,
+      "type": "boolean"
+     },
+     "value": {
+      "default": 0.0,
+      "type": "number"
+     }
+    },
+    "required": [
+     "mate_type",
+     "a_component",
+     "a_index",
+     "b_component",
+     "b_index"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "save_body_as_part",
+   "description": "Extract ONE solid body of the ACTIVE multibody part into its own .SLDPRT file.\nbody_index: from analyze_model(analysis_type='bodies'). The body's geometry stays in the\nSOURCE coordinates (recover the instance transform separately); the new part is saved to\nfile_path and closed, and the source document is re-activated. Use for flattened assembly\nimports whose per-part files don't exist: one file per DISTINCT body (fingerprint-deduped),\nthen instances reference it with recovered transforms.",
+   "input_schema": {
+    "properties": {
+     "body_index": {
+      "type": "integer"
+     },
+     "file_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "body_index",
+     "file_path"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "create_sketch",
+   "description": "Create a new sketch on a plane OR on an existing model face.\nDefault (on_face=False): provide plane (e.g. 'Front Plane', 'Top Plane', or a named ref plane like 'Plane1').\nOn a model face (on_face=True), pick the face one of two ways:\n  • face_index (PREFERRED) — the integer index of the target face from analyze_model(analysis_type='faces').\n    Robust: it selects the face directly, so it works on a revolve end-cap / shaft end where a coordinate\n    pick is ambiguous (the flat circular face's centre lies on the revolve axis → FACE_NOT_FOUND).\n  • face_x/face_y/face_z — a point in METERS lying ON the target planar face (interior, NOT on an edge).\nUse on_face for features on existing geometry (recess/hub/keyway on a part face, a bore on a shaft end);\nplane names cannot reach model faces. face_index takes priority over face_x/y/z when >= 0.",
+   "input_schema": {
+    "properties": {
+     "plane": {
+      "default": "",
+      "type": "string"
+     },
+     "on_face": {
+      "default": false,
+      "type": "boolean"
+     },
+     "face_index": {
+      "default": -1,
+      "type": "integer"
+     },
+     "face_x": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "face_y": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "face_z": {
+      "default": 0.0,
+      "type": "number"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_sketch_entity",
+   "description": "Add a sketch entity to the active sketch.\nentity_type='rectangle':  uses x1,y1 (first corner) and x2,y2 (opposite corner).\nentity_type='circle':     uses cx,cy (center) and radius.\nentity_type='line':       uses x1,y1 (start) and x2,y2 (end).\nentity_type='arc':        uses x1,y1 (start), x2,y2 (end), xm,ym (mid-arc point) — a 3-point arc.\nentity_type='arc_center': uses cx,cy (exact center), x1,y1 (start), x2,y2 (end) and optional\n                          direction. Prefer this over 'arc' when the exact center/radius are\n                          known (e.g. straight from analyze_model): it guarantees the radius\n                          and is numerically stable for shallow/near-collinear arcs where the\n                          3-point circle-fit is unreliable.\nentity_type='ellipse':    uses cx,cy (center), x1,y1 (a point on the MAJOR axis), x2,y2 (a point\n                          on the MINOR axis). Mirrors analyze_model's ellipse segment exactly.\nentity_type='spline':     uses points — a JSON array STRING of flat through-points\n                          '[x1,y1,x2,y2,...]' (>= 2 points). Mirrors analyze_model's spline segment\n                          (its 'points'). Round-trips its through-points exactly.\nentity_type='fillet':     uses vx,vy (vertex to round) and radius.\nentity_type='chamfer':    uses vx,vy (vertex to cut) and distance.\ndirection: only for 'arc_center' — sweep sense from start to end. OMIT IT (or pass 0) to get\n           the MINOR (<=180°) arc automatically — what a corner round/fillet arc virtually\n           always means; a wrong explicit sign silently draws the >180° complement. Pass +1\n           (CCW) or -1 (CW) ONLY when you deliberately need a specific/major sweep (round-trip\n           replays pass analyze's 'dir' verbatim). Ignored by other types.\npoints: only for 'spline' — a JSON array string of flat (x,y) through-points, e.g.\n        '[-0.2,0.0,-0.18,0.04,-0.14,0.05]'. Ignored by other types.\nconstruction: True makes the created entity CONSTRUCTION/reference geometry (centerline,\n        symmetry axis, hole-position scaffolding) — it guides the profile but adds no edge.\n        Mirrors analyze_model's per-segment 'construction' flag, so an analyzed sketch's\n        construction entities can be reproduced faithfully.\nThis tool MIRRORS analyze_model: every sketch segment analyze_model emits (line, arc/circle,\nellipse, spline, with cx/cy/x1/y1/x2/y2/radius/points/construction, partial arcs also 'dir'\n+1 CCW / -1 CW = arc_center's 'direction') maps 1:1 onto an entity_type here, so an\nanalyzed sketch can be rebuilt without dropping/simplifying any curve.\nOn COMPLETED the result includes result_geometry: the REAL geometry SolidWorks created (read back,\nnot echoed) — use it to self-verify the radius/endpoints match your intent before moving on.\nRebuilding from exact (frozen) coordinates: do NOT add coincident constraints between segments —\nsegments that share identical endpoint coordinates already close the profile, so a cut/extrude finds\nthe region automatically. Adding constraints is unnecessary and can fail and roll the sketch back.\nAll coordinates in document units (meters).",
+   "input_schema": {
+    "properties": {
+     "entity_type": {
+      "enum": [
+       "rectangle",
+       "circle",
+       "line",
+       "arc",
+       "arc_center",
+       "ellipse",
+       "spline",
+       "fillet",
+       "chamfer"
+      ],
+      "type": "string"
+     },
+     "x1": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "y1": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "x2": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "y2": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "xm": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "ym": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "cx": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "cy": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "radius": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "vx": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "vy": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "distance": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "direction": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "points": {
+      "default": "[]",
+      "type": "string"
+     },
+     "construction": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "entity_type"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_sketch_entities",
+   "description": "Add MANY sketch entities to the active sketch in ONE call (the batch form of\nadd_sketch_entity — prefer this whenever a profile has more than ~3 segments).\nsegments: a JSON array STRING of entity records, each record = add_sketch_entity's\nparameters for one entity, e.g.\n  '[{\"entity_type\":\"line\",\"x1\":0,\"y1\":0,\"x2\":0.05,\"y2\":0},\n    {\"entity_type\":\"arc_center\",\"cx\":0.05,\"cy\":0.005,\"x1\":0.05,\"y1\":0,\"x2\":0.055,\"y2\":0.005},\n    {\"entity_type\":\"circle\",\"cx\":0.02,\"cy\":0.02,\"radius\":0.004,\"construction\":true}]'\nCorner rounds / fillet arcs: use arc_center WITHOUT \"direction\" — the tool then draws the\nMINOR (<=180°) arc deterministically (an explicit wrong sign silently draws the 270°\ncomplement); pass direction ±1 only for a deliberate major arc.\nSupported entity_type values and their parameters are IDENTICAL to add_sketch_entity\n(rectangle/circle/line/arc/arc_center/ellipse/spline/fillet/chamfer; per-record\n'construction': true supported; one difference: a 'spline' record's \"points\" is a plain\nJSON array [x1,y1,x2,y2,...], not a nested string). Segments are created in array order —\nlist a profile's segments in contour order with EXACT shared endpoints (no coincident\nconstraints needed).\nNOT transactional: on the first failing record the call returns FAILED naming segments[i]\nand how many earlier records were created — those remain in the sketch.\nOn COMPLETED, result_geometry echoes {segment_count, counts per entity_type} (compact —\nNO per-segment geometry echo; read back with analyze_model(sketch, name=...) if needed).\nAll coordinates in document units (meters).",
+   "input_schema": {
+    "properties": {
+     "segments": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "segments"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_sketch_constraint",
+   "description": "Apply a geometric constraint to sketch entities in the active sketch.\nconstraint_type: 'horizontal', 'vertical' — single entity (px1, py1 only).\nconstraint_type: 'coincident', 'parallel', 'perpendicular', 'tangent', 'equal', 'midpoint' — requires two entities (px2, py2).\npx1/py1: point on the first entity. px2/py2: point on the second entity (two-entity constraints).\nentity_type1/2: 'SKETCHSEGMENT' (default) or 'SKETCHPOINT' for point-based constraints like coincident/midpoint.\nAll coordinates in document units (meters).",
+   "input_schema": {
+    "properties": {
+     "constraint_type": {
+      "enum": [
+       "horizontal",
+       "vertical",
+       "coincident",
+       "parallel",
+       "perpendicular",
+       "tangent",
+       "equal",
+       "midpoint"
+      ],
+      "type": "string"
+     },
+     "px1": {
+      "type": "number"
+     },
+     "py1": {
+      "type": "number"
+     },
+     "px2": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "py2": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "entity_type1": {
+      "default": "SKETCHSEGMENT",
+      "enum": [
+       "SKETCHSEGMENT",
+       "SKETCHPOINT"
+      ],
+      "type": "string"
+     },
+     "entity_type2": {
+      "default": "SKETCHSEGMENT",
+      "enum": [
+       "SKETCHSEGMENT",
+       "SKETCHPOINT"
+      ],
+      "type": "string"
+     }
+    },
+    "required": [
+     "constraint_type",
+     "px1",
+     "py1"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_dimension",
+   "description": "Apply a smart dimension to the sketch segment nearest to point (px, py).\npx/py should be on or very near the target segment — e.g. the midpoint of a line.\nlabel_offset_x/y control where the dimension label is placed relative to the segment point.\nWorks for any sketch geometry (rectangles, polygons, complex profiles).",
+   "input_schema": {
+    "properties": {
+     "px": {
+      "type": "number"
+     },
+     "py": {
+      "type": "number"
+     },
+     "value": {
+      "description": "Dimension value in METERS (e.g. 0.05 = 50mm)",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "label_offset_x": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "label_offset_y": {
+      "default": -0.015,
+      "type": "number"
+     }
+    },
+    "required": [
+     "px",
+     "py",
+     "value"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "extrude_feature",
+   "description": "Extrude/feature the active sketch profile.\nfeature_type='boss' (default): solid extrusion, requires depth.\nfeature_type='cut': material removal, requires depth and existing solid body.\nfeature_type='revolve': solid of revolution — angle in DEGREES (default 360 = full revolve); axis defined by axis_x1/y1 to axis_x2/y2 (midpoint of that segment selects the centerline).\nfeature_type='sweep': sweeps profile along a path — requires path_sketch (name of the path sketch).\nfeature_type='loft': lofts through multiple profiles — requires profiles (JSON array of sketch names, e.g. '[\"Sketch1\",\"Sketch2\"]').\nreverse (boss/cut): flip the feature direction. Needed e.g. for a cut/boss sketched on a part FACE, where the material is on the opposite side from the default.\nthrough (boss/cut): through-all end condition (depth is ignored). Use for through holes/cuts instead of guessing a depth.\nup_to_face_index (boss/cut): >= 0 selects the UP-TO-SURFACE end condition — the feature terminates\n    exactly ON that model face (index from analyze_model(analysis_type='faces'), same indexing as\n    create_sketch face_index). depth is ignored, like through. Use when the recipe says\n    extrude end='up_to_surface', or to land a boss/cut precisely on existing geometry without\n    computing a blind depth. -1 (default) = off.\nmid_plane (boss/cut): True selects the MID-PLANE end condition — the feature extrudes\n    SYMMETRICALLY about the sketch plane; depth is the TOTAL width. Use when the recipe says\n    extrude end='mid_plane'. Conflicts with through/up_to_face_index (pick one).\ndepth is required only for a BLIND or MID-PLANE boss/cut (not for through, up_to_face_index, revolve, sweep, or loft).\nSheet metal: a 'cut' on a sheet-metal body (incl. holes after a bend) is handled automatically — it\n    applies a Normal Cut and inserts before the Flat-Pattern; no special params needed. Use\n    analyze_model(analysis_type='edges') to get real edge midpoints for selection.\nOn COMPLETED the result includes result_geometry {volume, faces, edges} of the body after the feature\n    — verify the step from this instead of a separate analyze_model + manual volume math.\nExits sketch mode automatically before executing.",
+   "input_schema": {
+    "properties": {
+     "depth": {
+      "default": 0.0,
+      "description": "Extrusion depth in METERS (required > 0 for boss/cut)",
+      "minimum": 0,
+      "type": "number"
+     },
+     "feature_type": {
+      "default": "boss",
+      "enum": [
+       "boss",
+       "cut",
+       "revolve",
+       "sweep",
+       "loft"
+      ],
+      "type": "string"
+     },
+     "angle": {
+      "default": 360.0,
+      "description": "Revolve angle in DEGREES",
+      "exclusiveMinimum": 0,
+      "maximum": 360,
+      "type": "number"
+     },
+     "axis_x1": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "axis_y1": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "axis_x2": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "axis_y2": {
+      "default": 0.001,
+      "type": "number"
+     },
+     "path_sketch": {
+      "default": "",
+      "type": "string"
+     },
+     "profiles": {
+      "default": "[]",
+      "type": "string"
+     },
+     "reverse": {
+      "default": false,
+      "type": "boolean"
+     },
+     "through": {
+      "default": false,
+      "type": "boolean"
+     },
+     "up_to_face_index": {
+      "default": -1,
+      "type": "integer"
+     },
+     "mid_plane": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "create_rib",
+   "description": "Create a RIB from the ACTIVE sketch (consumes it, like extrude_feature). The rib profile\nis OPEN geometry — typically a single line (e.g. the diagonal between an L-bracket's legs);\nSolidWorks extends it to the surrounding walls and thickens it.\nthickness: rib thickness in METERS.\ntwo_sided: True (default) thickens symmetrically on both sides of the sketch; False = single\n    side (then reverse_thickness_dir picks which side).\nreverse_material_dir: flip which side of the profile the rib material FILLS toward. Wrong\n    direction is auto-recovered: if no feature results, the tool retries flipped (your\n    explicit value is tried first).\nis_norm_to_sketch: False (default) = extrusion parallel to the sketch (the classic line-rib\n    on a mid/symmetry plane); True = normal to the sketch.\nDraft is deliberately not exposed (grow on demand). On COMPLETED the result includes\nresult_geometry {volume, faces, edges} — verify the step from this. Requires an existing\nsolid body for the rib to attach to.",
+   "input_schema": {
+    "properties": {
+     "thickness": {
+      "description": "Rib thickness in METERS (e.g. 0.005 = 5mm)",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "two_sided": {
+      "default": true,
+      "type": "boolean"
+     },
+     "reverse_thickness_dir": {
+      "default": false,
+      "type": "boolean"
+     },
+     "reverse_material_dir": {
+      "default": false,
+      "type": "boolean"
+     },
+     "is_norm_to_sketch": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "thickness"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_edge_feature",
+   "description": "Apply a 3D edge modifier to solid body edges (post-extrusion). Distinct from sketch fillet/chamfer.\nfeature_type='fillet': rounds selected edge(s) with given radius_or_distance.\nfeature_type='chamfer': cuts a chamfer on selected edge(s). Two modes via chamfer_type:\n  - 'distance_angle' (default): radius_or_distance = setback (D1), angle = the chamfer angle in DEGREES\n    (default 45 → the classic equal 45° chamfer). angle is ignored in the other mode.\n  - 'distance_distance': radius_or_distance = first-face setback (D1), distance2 = second-face setback\n    (D2, METERS, required > 0). A distance-distance chamfer is DIRECTIONAL — if D1/D2 land on the wrong\n    faces (the chamfer leans the wrong way), set chamfer_flip=True to swap the sides (FlipDirection).\nPREFERRED edge selection: edge_indices — a JSON array of integer indices from analyze_model(analysis_type='edges'),\ne.g. '[3,5]'. This selects edges directly (no coordinate pick), so it works on crowded or CONCAVE edges\n(inner-corner / small-radius step edges) that a coordinate pick can't disambiguate. Takes priority over\nedges_json / ex-ey-ez.\nFallback — single edge: ex/ey/ez (3D point on the edge); multiple edges: edges_json e.g. '[{\"ex\":0.05,\"ey\":0.05,\"ez\":0.05}]'.\nAll coordinates/distances in METERS. Requires an active part document with an existing solid body.",
+   "input_schema": {
+    "properties": {
+     "feature_type": {
+      "enum": [
+       "fillet",
+       "chamfer"
+      ],
+      "type": "string"
+     },
+     "radius_or_distance": {
+      "description": "Fillet radius / chamfer FIRST-face setback (D1) in METERS (e.g. 0.01 = 10mm)",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "edge_indices": {
+      "default": "",
+      "type": "string"
+     },
+     "ex": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "ey": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "ez": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "edges_json": {
+      "default": "[]",
+      "type": "string"
+     },
+     "chamfer_type": {
+      "default": "distance_angle",
+      "enum": [
+       "distance_angle",
+       "distance_distance"
+      ],
+      "type": "string"
+     },
+     "angle": {
+      "default": 45.0,
+      "description": "Chamfer angle in DEGREES (distance_angle mode only; default 45)",
+      "exclusiveMaximum": 90,
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "distance2": {
+      "default": 0.0,
+      "description": "Chamfer SECOND-face setback (D2) in METERS (distance_distance mode only; must be > 0 there)",
+      "minimum": 0,
+      "type": "number"
+     },
+     "chamfer_flip": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "feature_type",
+     "radius_or_distance"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "create_drawing",
+   "description": "Open a new SolidWorks drawing document (A3 sheet, 1:1 scale).\nmodel_path: optional path to the part/assembly to reference. If omitted, an empty drawing is created.\nNote: add_drawing_view requires the referenced part to be saved to disk.",
+   "input_schema": {
+    "properties": {
+     "model_path": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_drawing_view",
+   "description": "Add a model view to the active drawing sheet.\nview_type: 'front', 'top', 'right', 'isometric', 'back', 'bottom', 'left'.\npos_x/pos_y: position on the drawing sheet in meters.\nscale: view scale (default 1.0 = 1:1).\nmodel_path: path to the part file; if omitted, uses the first open part document.\ndisplay_mode: view display style — 'hlv' (Hidden Lines Visible), 'hlr' (Hidden Lines Removed),\n    'wireframe', 'shaded', 'shaded_edges', or 'default' (document default). Leave '' to apply the\n    DRAFTING-CONVENTION default: orthographic views (front/top/right/back/bottom/left) become HLV\n    (hidden lines shown for reference — but never dimension to them), isometric keeps the document\n    default. Section views (add_section_view) are separate and show the cut, not hidden lines.\nRequires the part to be saved to disk (in-memory parts cannot be projected).",
+   "input_schema": {
+    "properties": {
+     "view_type": {
+      "enum": [
+       "front",
+       "top",
+       "right",
+       "isometric",
+       "back",
+       "bottom",
+       "left"
+      ],
+      "type": "string"
+     },
+     "pos_x": {
+      "default": 0.1,
+      "type": "number"
+     },
+     "pos_y": {
+      "default": 0.1,
+      "type": "number"
+     },
+     "scale": {
+      "default": 1.0,
+      "description": "View scale (1.0 = 1:1)",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "model_path": {
+      "default": "",
+      "type": "string"
+     },
+     "display_mode": {
+      "default": "",
+      "enum": [
+       "",
+       "hlv",
+       "hlr",
+       "wireframe",
+       "shaded",
+       "shaded_edges",
+       "default"
+      ],
+      "type": "string"
+     }
+    },
+    "required": [
+     "view_type"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_flat_pattern_view",
+   "description": "Add a FLAT PATTERN view of a SHEET-METAL part to the active drawing — the unfolded blank\nwith bend lines/notes. This is the correct, standard way to detail sheet metal: sheet metal is\ndimensioned on its flat pattern (overall blank size, hole positions, bend lines), NOT on the\nfolded orthographic views. Use this instead of (or alongside an isometric of) the folded views\nfor a sheet-metal part; then call auto_dimension_drawing to place the blank/hole dimensions.\n\npos_x/pos_y: position on the drawing sheet in meters.\nscale: view scale (default 1.0 = 1:1).\nmodel_path: path to the sheet-metal part; if omitted, uses the first open part document.\nconfig_name: configuration to flatten; if omitted, the part's active configuration is used\n    (falling back to 'Default').\nhide_bend_lines: hide the bend lines in the flat pattern (default False).\nflip_view: flip the flat pattern view (default False).\n\nThe part must be sheet metal (have a Flat-Pattern feature) and saved to disk, else returns\nFLAT_PATTERN_VIEW_FAILED. Bumps state_version; result_geometry echoes {view_name, config}.",
+   "input_schema": {
+    "properties": {
+     "pos_x": {
+      "default": 0.1,
+      "type": "number"
+     },
+     "pos_y": {
+      "default": 0.1,
+      "type": "number"
+     },
+     "scale": {
+      "default": 1.0,
+      "description": "View scale (1.0 = 1:1)",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "model_path": {
+      "default": "",
+      "type": "string"
+     },
+     "config_name": {
+      "default": "",
+      "type": "string"
+     },
+     "hide_bend_lines": {
+      "default": false,
+      "type": "boolean"
+     },
+     "flip_view": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_drawing_dimension",
+   "description": "Add a smart dimension to a drawing view segment nearest to point (px, py).\nWorks the same way as add_dimension but operates in a drawing document context.\npx/py should be on or very near the target segment in drawing sheet coordinates (meters).\nRequires an active drawing document.",
+   "input_schema": {
+    "properties": {
+     "px": {
+      "type": "number"
+     },
+     "py": {
+      "type": "number"
+     },
+     "value": {
+      "description": "Dimension value in METERS",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "label_offset_x": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "label_offset_y": {
+      "default": -0.015,
+      "type": "number"
+     }
+    },
+    "required": [
+     "px",
+     "py",
+     "value"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "auto_dimension_drawing",
+   "description": "Automatically transfer the MODEL's driving dimensions into the active drawing's views\n(SolidWorks 'Insert Model Items > Dimensions'). This is the PREFERRED way to dimension a\ndrawing — far more reliable than add_drawing_dimension's coordinate pick, because the\ndimensions come straight from the model's real parametric dimensions and are placed for you.\nCall it AFTER create_drawing + add_drawing_view(s); then verify with analyze_slddrw_test\n(dimension_count should be > 0 and the values should match the model's driving dims).\n\nall_views: insert into all drawing views (True) or only the currently selected view (False). Default True.\ninclude_unmarked: also insert driving dimensions NOT marked for drawing (i.e. ALL driving dims), not just\n    those flagged 'marked for drawing'. More complete but noisier. Default False — if a marked-only pass\n    inserts 0 dimensions (the part's dims weren't marked for drawing), re-call with include_unmarked=True.\neliminate_duplicates: avoid inserting the same model dimension into more than one view. Default True.\n\nReturns COMPLETED with result_geometry.inserted_count (the number of dimensions placed; 0 is a valid\noutcome). Requires an active drawing with at least one model view. Bumps state_version.",
+   "input_schema": {
+    "properties": {
+     "all_views": {
+      "default": true,
+      "type": "boolean"
+     },
+     "include_unmarked": {
+      "default": false,
+      "type": "boolean"
+     },
+     "eliminate_duplicates": {
+      "default": true,
+      "type": "boolean"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "auto_center_marks",
+   "description": "Automatically place center marks (with extended centerlines) on every hole/slot in every\nmodel view of the active drawing (SolidWorks 'Auto Insert > Center Marks'). This is the robust,\nautomatic way to add centerlines to a holed part's drawing — no coordinate picking. Call it\nafter the views exist (create_drawing + add_drawing_view), typically alongside\nauto_dimension_drawing, for a difficulty-2-grade drawing of a bracket/flange with holes.\n\ninclude_slots: also add slot center marks/centerlines for linear & arc slots (not just round holes). Default True.\nextended_lines: draw the extended centerlines through each hole rather than a small cross. Default True.\n\nReturns COMPLETED with result_geometry.center_marks (total marks placed across all views; 0 if the\npart has no holes/slots). Bumps state_version. Requires an active drawing with model views.",
+   "input_schema": {
+    "properties": {
+     "include_slots": {
+      "default": true,
+      "type": "boolean"
+     },
+     "extended_lines": {
+      "default": true,
+      "type": "boolean"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_hole_callout",
+   "description": "Insert a hole callout (e.g. '4× Ø8 THRU') on the hole edge nearest the sheet point (px, py)\nin the active drawing. Coordinate-based selection — same fragile point pick as add_drawing_dimension\n(KNOWN-LIMITATIONS #6), so place px/py right on the hole's projected circular edge. For centerlines\nprefer auto_center_marks (robust/automatic); use this for explicit per-hole callouts where wanted.\npx/py: a point on the target hole's projected circle, in drawing sheet coordinates (meters).\nRequires an active drawing document. Bumps state_version.",
+   "input_schema": {
+    "properties": {
+     "px": {
+      "type": "number"
+     },
+     "py": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "px",
+     "py"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_section_view",
+   "description": "Create a SECTION VIEW that cuts the model so internal/blind features become visible, dimensionable\nedges. Use this when a feature's size can't be shown in a projected view — most importantly a BLIND\nPOCKET's DEPTH (its floor is a hidden edge in an orthographic view, so auto_dimension_drawing can't\nplace the depth).\n\nTwo ways to define the cut (provide ONE pair-set):\n- EDGE mode (edge_x, edge_y): cut ALONG an existing straight edge/line already projected in a view —\n  point at it. Best when a real edge lies on the plane you want (the cut runs collinear with it).\n- LINE mode (x1,y1 → x2,y2): draw a cut line. Best for cutting THROUGH a feature's interior (e.g. the\n  MIDDLE of a pocket, where no edge exists). The line must fully cross the view through the feature.\nAll coordinates are drawing sheet coordinates in meters (KNOWN-LIMITATIONS #6 — coordinate-based).\n\npx,py: where to place the section view (meters) — also picks which side the section projects toward.\nlabel: section label (default 'A' → 'SECTION A-A'). flip: reverse the cut/viewing direction.\nscale: optional section view scale; inherits the parent view's scale if 0/omitted.\n\nAfter the section lands, call auto_dimension_drawing or add_drawing_dimension to dimension the\nnow-visible depth. Bumps state_version. Requires an active drawing with a parent model view. If it\nreturns SECTION_VIEW_FAILED, the drawing state may be wedged by prior failed attempts — a fresh\nserver/drawing state clears it.",
+   "input_schema": {
+    "properties": {
+     "px": {
+      "type": "number"
+     },
+     "py": {
+      "type": "number"
+     },
+     "edge_x": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "edge_y": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "x1": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "y1": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "x2": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "y2": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "label": {
+      "default": "A",
+      "type": "string"
+     },
+     "flip": {
+      "default": false,
+      "type": "boolean"
+     },
+     "scale": {
+      "default": 0.0,
+      "type": "number"
+     }
+    },
+    "required": [
+     "px",
+     "py"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "export_document",
+   "description": "Export the active SolidWorks document to a file. The document remains open after export.\nformat: 'STEP', 'IGES', 'STL', 'PDF', 'DWG', 'DXF'.\nfile_path: full output path including filename and extension (e.g. 'C:/output/part.step').\nNote: DWG and DXF require an active drawing document (use create_drawing first).\nPDF uses SolidWorks PDF export options. STEP/IGES/STL work with part or assembly documents.\nIGES must use a .igs extension (.iges is auto-corrected to .igs).",
+   "input_schema": {
+    "properties": {
+     "format": {
+      "enum": [
+       "STEP",
+       "IGES",
+       "STL",
+       "PDF",
+       "DWG",
+       "DXF"
+      ],
+      "type": "string"
+     },
+     "file_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "format",
+     "file_path"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "batch_export",
+   "description": "Export the active document to multiple formats in one call.\nfile_path_base: output path without extension (e.g. 'C:/output/mypart').\nformats_json: JSON array of format strings (e.g. '[\"STEP\",\"STL\",\"PDF\"]').\nEach format is exported as file_path_base.<ext>. DWG/DXF skipped if active doc is not a drawing.\nPartial success is reported in the response Features list.",
+   "input_schema": {
+    "properties": {
+     "file_path_base": {
+      "type": "string"
+     },
+     "formats_json": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "file_path_base",
+     "formats_json"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "verify_state",
+   "description": "Read and return the current CAD state without modifying it.",
+   "input_schema": {
+    "properties": {},
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "close_document",
+   "description": "Close the active SolidWorks document. Set save=True to save before closing.\nclose_all=True closes ALL open documents (incl. invisibly-loaded component docs that a\nper-document close loop can never reach), DISCARDING unsaved changes — use to fully reset\nthe document space between assembly jobs.",
+   "input_schema": {
+    "properties": {
+     "save": {
+      "default": false,
+      "type": "boolean"
+     },
+     "close_all": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "save_document",
+   "description": "Save the active SolidWorks document to disk.\nfile_path: full output path including the document extension\n(.sldprt for parts, .sldasm for assemblies, .slddrw for drawings).\nIf omitted, saves in place (only works if the document was saved before).\nA part must be saved to disk before it can be referenced by a drawing view.",
+   "input_schema": {
+    "properties": {
+     "file_path": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "analyze_model",
+   "description": "Analyze the active SolidWorks part document (read-only, does NOT change state).\nanalysis_type='mass_properties': returns volume, surface_area, center of gravity (cx, cy, cz) in document units.\nanalysis_type='geometry': returns bodies, faces, edges, vertices counts of all solid bodies.\nanalysis_type='bodies': PER-BODY fingerprints for multibody parts (e.g. a flattened assembly\n    STEP import): volume, area, centroid, edge/vertex counts, and the body's face-index RANGE\n    in the same enumeration 'faces' walks — segment the faces list per body with it.\nanalysis_type='edges': returns a JSON object listing EVERY solid edge with its start/end/MIDPOINT 3D coords\n    in meters (rounded to 6 decimals; closed/circular edges also report length) and a stable index `i`. Use\n    the index `i` for add_edge_feature(edge_indices=...) — robust for crowded/concave edges — or a MIDPOINT\n    for coordinate-based selection (e.g. edge_flange's ex/ey/ez). On a very large part (many hundreds of edges)\n    this is the slowest mode; prefer 'features' for a general understanding. TARGETED (recommended when you\n    already know roughly WHERE): pass near='[x,y,z]' (+ optional k, axis) to get only the k nearest edges to\n    a point instead of the full dump — see near/k/axis below.\nanalysis_type='faces': returns a JSON object listing EVERY solid face with a stable index `i`; planar faces\n    also carry normal, area, and a representative on-plane point (meters, rounded to 6 decimals). Use the\n    index `i` for create_sketch(on_face=True, face_index=i) — robust where a coordinate pick is ambiguous\n    (e.g. a revolve end-cap / shaft end whose centre lies on the axis). TARGETED: pass near='[x,y,z]'\n    (+ optional k, axis) for only the k nearest faces to a point — see near/k/axis below.\nanalysis_type='features': the part's COMPACT RECIPE — this is the default \"understand the part\" read. Returns\n    the ordered feature tree (name/type; suppressed shown only when true), each feature's driving dimensions\n    (deduped, SI meters/radians, rounded to 6 decimals), a per-sketch SUMMARY (segment counts + an inline\n    {cx,cy,r} for single-full-circle profiles), pattern semantics (instances / spacing_deg / distinct_instances\n    / wraps), and equations / globals. Each sketch reports its plane as {ref, offset} where ref is the\n    canonical English default plane ('Front Plane'/'Top Plane'/'Right Plane') and offset is the signed\n    distance along its normal (offset 0 = that default plane itself; offset != 0 = a parallel face/plane\n    at that height — sketch on the face there). Each extrude/cut reports extrude:{end (blind/through_all/\n    ...), depth (blind only), reversed (present only when the direction is flipped)} so you know HOW it\n    was built; for direction use the sketch's plane.offset (offset != 0 ⇒ a face, so a cut goes into the\n    part). Features are listed in tree (history) ORDER — reproduce them in that exact order (order\n    matters wherever features overlap). It does NOT dump every sketch segment's coordinates — that keeps the payload small\n    and is enough to understand the part and build dimension/pattern variants. Use this first.\nanalysis_type='sketch' (requires name=...): ONE sketch's FULL geometry — every segment's coordinates (rounded\n    to 6 decimals) plus its plane. Use this only when you actually need exact sketch geometry (e.g. to reproduce\n    an irregular profile); get the sketch name from the 'features' read first. name = the sketch feature name,\n    e.g. 'Sketch2'.\nanalysis_type='feature_map': per-feature geometry ATTRIBUTION — deterministically answers \"which edges/faces\n    did each feature act on?\" (e.g. WHICH edge a fillet/chamfer was applied to — never guess an anchor). Walks\n    the tree base→end with the rollback bar and diffs the topology between stops INSIDE the tool; returns one\n    compact JSON {feature_count, map:[{feature, type, delta:{faces,edges,vertices}, consumed_edges:[{mid,len}],\n    created_faces:[{point, normal?, planar, area}]}]} (6-decimal meters). consumed_edges = edges that existed\n    BEFORE the feature and were consumed by it (both endpoints gone; merely trimmed neighbours excluded) — use\n    a consumed edge's `mid` as the fillet/chamfer anchor `near` point (it references the PRE-feature geometry,\n    exactly what the IR anchor needs). created_faces = genuinely new surfaces (trimmed existing planes excluded).\n    Sketches/planes are listed without a delta; suppressed features are skipped. Optional from_feature/to_feature\n    (tree names) limit the walk to a range. NON-DESTRUCTIVE: the rollback bar is restored to the end, nothing is\n    saved — but it does rebuild the model feature-by-feature, so it is the slowest mode on big trees.\n\nnear / k / axis (edges and faces modes ONLY — a TARGETED read instead of the full dump): when you already\n    know approximately where the geometry is (the common build-time case — you almost always do), pass\n    near='[x,y,z]' (a JSON string, meters) to return only the nearest entities to that point, each annotated\n    with `dist` (meters) and still carrying its STABLE full-enumeration index `i` (so selection is unchanged).\n    k (default 0 = no cap): keep only the k nearest. axis='[x,y,z]' (optional JSON string): keep only entities\n    whose direction is ~parallel to axis — for faces that's the planar-face NORMAL (e.g. axis='[0,0,1]' → only\n    faces on +Z planes), for edges the chord direction. The response adds total_edge_count/total_face_count so\n    you know how many were filtered out. Omitting near preserves the exact historical full-dump behavior.\nDoes NOT increment state_version.",
+   "input_schema": {
+    "properties": {
+     "analysis_type": {
+      "enum": [
+       "mass_properties",
+       "geometry",
+       "bodies",
+       "edges",
+       "faces",
+       "features",
+       "sketch",
+       "feature_map"
+      ],
+      "type": "string"
+     },
+     "name": {
+      "default": "",
+      "type": "string"
+     },
+     "from_feature": {
+      "default": "",
+      "type": "string"
+     },
+     "to_feature": {
+      "default": "",
+      "type": "string"
+     },
+     "near": {
+      "default": "",
+      "type": "string"
+     },
+     "k": {
+      "default": 0,
+      "type": "integer"
+     },
+     "axis": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "required": [
+     "analysis_type"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "analyze_drawing",
+   "description": "Read a 2D technical drawing — **.DXF or .DWG** — and either BUILD the part from it or hand\nyou the evidence to build it yourself. This is the drawing→part front end: a real drawing\narrives as DXF/DWG (a .SLDDRW is model-linked and nobody ships one), so start here for ANY\n\"build the part from this drawing\" job. A .DWG is converted automatically.\n\n**mode='auto' (default) returns ONE OF TWO SHAPES — the reader decides, not you:**\n\n(A) `DIRECT_BUILDABLE` — a short plain-text summary. Every decision this drawing needs is\n    forced by the drawing itself (today: sheet-metal flat patterns), so the whole part has\n    already been lowered to Feature Graph IR deterministically. You get the blank size, the\n    thickness and its source, every bend with its edge-class corroboration, and the EXPECTED\n    VOLUME — enough to judge the build — but NOT the contour, on purpose: a real outline is\n    scores of segments and echoing it back would cost the tokens twice. Read it, then call\n    `mode='build'`. Anything the reader could not attribute is listed as SKIPPED and will not\n    be built; completing or declaring it is then yours (recipe R15).\n\n(B) `NOT_DIRECT | <reason>` followed by the full analysis JSON — the drawing needs real\n    reading. This is the normal path for machined parts. The reason names exactly which\n    decision the drawing left open. Nothing is lost: read the JSON per the\n    recipe://usage/reverse resource and build with submit_feature_graph as before.\n\nmode='full'  — always the full analysis JSON, even when it is directly buildable.\nmode='ir'    — the lowered Feature Graph IR, without building. For inspection or saving.\nmode='build' — lower and BUILD, through the same deterministic pycompiler as\n               submit_feature_graph. **CHANGES GEOMETRY and bumps state_version.** Opens a new\n               part. Re-derives from the same file, so it needs no cached graph — but verify\n               the sha256 in the summary is the file you looked at.\n\n⮕ Before reading a `full` payload, read the MCP resource `recipe://usage/reverse` — it holds\n  the reading discipline (scale, edge classes, projection standard, sheet-metal bend\n  arithmetic) and the self-verification rules that make this small payload sufficient.\n\nThe full JSON:\n  sheet — dxf_version, units, **scale_factor** and the sheet box. `scale_factor` is ALREADY\n    applied to every size/coordinate/dimension below, so all numbers are TRUE model mm.\n  views[] — one per detected view: `vid`, `paper_box` (sheet coords, for reading the LAYOUT),\n    `size` [w,h] in true mm, and `geometry` {lines, arcs, circles} in view-local true mm with\n    the view's own bottom-left as origin. Every primitive carries `c`, its EDGE CLASS:\n    'visible' (near-side edge) | 'hidden' (obscured — a real feature seen through material) |\n    'cut_line' (a section's cutting line, not part geometry) | 'center' (an axis).\n    The sheet border/title block is NOT a view; a cluster INSIDE a view is that view's feature.\n  views[].loops[] — the CLOSED contours, already chained: {id, class, role outer|inner, parent,\n    area (mm^2, arc bulges exact), bbox, seq}. `seq` is [[code, index, dir], …] referencing\n    that view's own geometry arrays — the contour IN ORDER, ready to transcribe as a sketch\n    path profile. Traverse it as given; consecutive entries share an endpoint exactly.\n  views[].open_chains[] — segments belonging to no contour: bend lines, centre lines, and (in\n    an ortho view) silhouette fragments the chainer refused to guess through a T-junction. An\n    open chain you cannot account for is a GAP to declare, never a contour to invent.\n  alignment[] — view pairs sharing a paper axis: shares='x' is a vertical projection pair,\n    'y' a horizontal one. This gives the shared AXIS; the projection standard (config) gives\n    which physical face a placed view shows.\n  dimensions[] — `value` (TRUE), `kind` (linear|aligned|angular|diameter|radius|ordinate),\n    `defpts` (the dimension's own reference points, sheet coords) and the owning `view`.\n    `text` appears only when the drafter overrode it (e.g. '8x <>' = a count).\n  bend_notes[] — sheet metal: {dir UP|DOWN, angle_deg, radius, view} plus either `bend_line`\n    (the line it annotates, that line's edge class, and `in_loop` — true would mean the match\n    landed on outline geometry, which a bend line never is) or `unpaired` with the reason and\n    the candidates. Direction comes from the NOTE; the class corroborates it.\n  notes[] — other free text on the sheet (e.g. a bare '2 mm' thickness note, 'SECTION C-C').\n\nfile_path: absolute path to the .DXF or .DWG.\nsave_analysis (default True): also write `<name>.analysis-v<version>.json` beside the source —\n    a research artifact for cross-part study, versioned by the analyzer. Same version\n    overwrites; you never need to read it back.",
+   "input_schema": {
+    "properties": {
+     "file_path": {
+      "type": "string"
+     },
+     "save_analysis": {
+      "default": true,
+      "type": "boolean"
+     },
+     "mode": {
+      "default": "auto",
+      "enum": [
+       "auto",
+       "full",
+       "ir",
+       "build"
+      ],
+      "type": "string"
+     }
+    },
+    "required": [
+     "file_path"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "analyze_slddrw_test",
+   "description": "TEST/REFERENCE TOOL — reads a NATIVE SolidWorks drawing (.SLDDRW) through COM.\n\n⚠ NOT the shipping drawing→part path. A .SLDDRW is SLDPRT-linked (its views go blank if the part\n  is gone) and nobody ships one — real inputs are DXF/DWG (and PDF). This tool survives for two\n  jobs ONLY: (a) checking a drawing YOU produced (do its dimensions match the model?), and\n  (b) generating COM ground truth to compare a DXF reader against. For a DXF/DWG job do NOT use\n  this tool and do NOT apply its discipline — the fields below (measures, section, normal_axis,\n  relations, extent, center_marks) are COM constructs that DO NOT EXIST in a DXF.\n\n⮕ Reconstructing a part from a NATIVE SLDDRW (test/comparison work only)? The FROZEN\n  reverse-reading discipline is deliberately NOT on the MCP surface (ADR-069) — it is the repo\n  file `cad-planner/slddrw-testing-recipe-usage.md`. Read it from disk when this tool is the\n  job; port a rule out of it into the active recipe only as a conscious decision (ADR-063).\n\nRead-only, does NOT change state. Returns {view_count, dimension_count, views:[{name, type, scale,\npos, dimensions:[...], section?}]}: each view's name, type (swDrawingViewTypes_e int), scale, sheet\nposition [x,y] in meters, and its display dimensions. The FIRST view is the drawing SHEET (interpret\naccordingly).\n\nEach dimension is {name, value_si (meters/radians, 6 decimals), diametric?, attached?, anchors?}:\n  diametric — true flags a Ø (diameter) dimension, so \"is this 17 a diameter?\" is DATA, not a guess.\n  attached  — the KIND(s) of geometry the dim hangs off (edge/vertex/sketch_seg/...).\n  anchors   — the dimension's reference points in MODEL space [x,y,z] meters — the concrete geometry it\n              snaps to (maps \"what is this 17 the dimension of?\" to a 3D location arithmetically; an\n              anchor whose coordinate lies BEYOND the base body's depth signals a feature that extends\n              past it — an offset-plane boss/loft — not bad data).\nA view's section block (present only on SECTION views) is {parent_view, cut_normal, axis?, frame, label?}:\n  cut_normal — the cutting-plane NORMAL in MODEL space (= the section's viewing direction);\n  axis       — that normal snapped to 'X'/'Y'/'Z' when axis-aligned (the direct answer to \"A-A ⟂ which axis?\");\n  frame      — {origin, xdir, ydir} in MODEL space: a 2D section-geometry coord (u,v) maps to 3D as\n               p_model = origin + u*xdir + v*ydir; parent_view names the view the cut was taken in.\n\ninclude_geometry (default False): also return each view's PROJECTED 2D GEOMETRY as clean primitives —\n    geometry:{lines:[{x1,y1,x2,y2}], curves:[{n,x1,y1,xm,ym,x2,y2,cx?,cy?,r?}], circles:[{cx,cy,r}],\n    frame:{origin,xdir,ydir}}. This is the CLEAN SHAPE for reverse-engineering a part from its drawing,\n    independent of dimension-line clutter. Coordinates are MODEL-scale METERS in the view plane; the\n    view's frame maps ANY of them (incl. circle centers) to 3D: p_model = origin + x*xdir + y*ydir.\n    circles are FULL circles with their true center+radius (a bore/boss cross-section — TRUST cx,cy:\n    concentric circles of differing r in a plan view + slanted silhouette lines in an adjacent view\n    = a loft/cone/taper). curves are partial arcs (fillets etc.) as start/mid/end + fitted center.\n    The line segments carry the UP/DOWN / which-face profile structure a dimension VALUE alone cannot.\n    Source: IView.GetPolylines7. Heavier payload — use when you need the shape, not for a dim check.\n    Each frame also carries normal_axis (the view's viewing direction as a SIGNED principal axis,\n    e.g. 'Y'/'-Z'): a CIRCLE in a view is the cross-section of a feature whose axis runs along that\n    view's normal — circles in different-normal_axis views are DIFFERENT features unless a section\n    proves otherwise. Do NOT chain circles across views into one feature by radius alone.\n    Axis-aligned views also carry geometry.extent {axis:[min,max]} — the SERVER-computed model-space\n    span of all primitives (frame signs applied). Read it BEFORE any \"no material beyond X\" claim;\n    never re-derive a view's span from raw 2D coordinates (frame direction components can be negative).\n\ninclude_relations (default False; forces include_geometry): ADDITIVE deterministic enrichment for\n    reverse reading — pass BOTH flags True for a drawing→part reconstruction. Ids are positional,\n    per-read: each view gets vid ('v<views[] index>'); within a view c<i>=circles[i],\n    a<i>=curves[i], l<i>=lines[i]. Every relation carries source (closed enum) + residual (max\n    deviation, meters 6dp) — \"why is this concentric?\" is answerable by reading the field. Adds:\n  relations per view — concentric:{members,center,radii} (TRUST these shared centers — never\n    re-derive), equal_diameter:{members,r,centers} (same Ø at distinct centers = twin bores),\n    tangent (circle/arc/line contacts). (`touches` and the root `stations` table were REMOVED\n    from the reader in 0.16.1 / ADR-059 — redundant and unconsumed.)\n  measures per dimension — the primitive id(s) the dim measures, resolved from its anchors\n    (measure_src anchor_at_center|anchor_on_primitive); a dim with unattached:true resolved to NO\n    primitive — a loud gap to close from geometry, never dropped.\n  center_marks / centerlines per view — which circles carry center marks (on:[ids]), centerline\n    segments (through:[ids]); a view reporting centerlines it cannot expose emits\n    {centerlines_reported, unreadable:true} instead of a guess.\n\nRequires an active NATIVE drawing document.",
+   "input_schema": {
+    "properties": {
+     "include_geometry": {
+      "default": false,
+      "type": "boolean"
+     },
+     "include_relations": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "get_selection",
+   "description": "Report what the USER currently has selected in the SolidWorks GUI — the inverse of index-based selection.\nWhen the user clicks geometry in the SolidWorks window (e.g. while telling you what to do — \"put a hole on\nTHIS face\"), call this to learn exactly which entity they mean. Each selected item is mapped to the SAME\nstable index analyze_model(faces/edges) reports, so you can act on it immediately:\n  • a FACE  → {type:'face', i, planar, normal?, area, point?} → create_sketch(on_face=True, face_index=i)\n  • an EDGE → {type:'edge', i, start, end, mid}              → add_edge_feature(edge_indices='[i]')\n  • a VERTEX → {type:'vertex', point:[x,y,z]};  a reference PLANE → {type:'plane', name}\nReturns {selected_count, selection:[...]}. i = -1 if a selected face/edge couldn't be matched to a\nsolid-body index. Read-only: does NOT change state_version and does NOT clear the selection — but call it\nBEFORE any tool that clears the selection (create_sketch, add_edge_feature, extrude cut, etc.), otherwise\nthe user's pick is gone. If selected_count is 0, ask the user to click the face/edge they mean.",
+   "input_schema": {
+    "properties": {},
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "edit_sketch",
+   "description": "Reopen an existing sketch for editing. Counterpart to create_sketch.\nsketch_name: exact name of the sketch feature in the feature tree (e.g. 'Sketch1').\nReturns COMPLETED with ActiveSketch set to sketch_name.\nAfter editing, call extrude_feature (or any feature) to exit the sketch.",
+   "input_schema": {
+    "properties": {
+     "sketch_name": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "sketch_name"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "add_reference_geometry",
+   "description": "Create reference geometry (plane, axis, or point) in the active part.\ntype='plane': offset plane from ref_plane_name by offset (meters). E.g. ref_plane_name='Front Plane', offset=0.05.\ntype='axis': axis at intersection of two entities. Provide entity1_name, entity1_type, entity2_name, entity2_type (e.g. 'Top Plane'/'PLANE' and 'Right Plane'/'PLANE').\ntype='point': reference point at vertex (px, py, pz). Coordinates must match an existing vertex exactly.\nReturns the created feature name (e.g. 'Plane1', 'Axis1', 'Point1').",
+   "input_schema": {
+    "properties": {
+     "type": {
+      "enum": [
+       "plane",
+       "axis",
+       "point"
+      ],
+      "type": "string"
+     },
+     "ref_plane_name": {
+      "default": "",
+      "type": "string"
+     },
+     "offset": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "entity1_name": {
+      "default": "",
+      "type": "string"
+     },
+     "entity1_type": {
+      "default": "PLANE",
+      "type": "string"
+     },
+     "entity2_name": {
+      "default": "",
+      "type": "string"
+     },
+     "entity2_type": {
+      "default": "PLANE",
+      "type": "string"
+     },
+     "px": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "py": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "pz": {
+      "default": 0.0,
+      "type": "number"
+     }
+    },
+    "required": [
+     "type"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "create_pattern",
+   "description": "Create a linear, circular, or mirror feature pattern.\npattern_type='linear': repeats feature_name along direction ('X', 'Y', or 'Z') with spacing (meters) and count instances.\n    flip=True patterns toward the NEGATIVE axis (default False = positive).\n    Direction maps to default planes: X→Right Plane normal, Y→Top Plane normal, Z→Front Plane normal.\n    KNOWN LIMIT: count2/spacing2 are accepted but the second direction has no D2 entity wired —\n    two-direction grids do NOT work in one call; compose a grid as a pattern OF a pattern instead.\npattern_type='circular': repeats feature_name around axis_name (reference axis, e.g. 'Axis1') with count instances.\n    Create the axis first with add_reference_geometry(type='axis', ...).\n    equal_spacing=True (default): angle is the TOTAL spread (use 360 for a full ring); count instances are\n        evenly divided across it and NEVER overlap (count distinct == count).\n    equal_spacing=False: angle is the spacing BETWEEN adjacent instances. count*angle can exceed 360, in which\n        case later instances WRAP and overlap earlier ones, so the number of DISTINCT instances < count.\nRound-trip with analyze_model: a CirPattern reports instances, equal_spacing, spacing_deg, plus the\n    EFFECTIVE distinct_instances and a wraps flag. To reproduce a pattern faithfully, EITHER replay the\n    stored form verbatim (count=instances, angle=spacing_deg, equal_spacing as reported) OR, when it wraps,\n    use the simpler equivalent full ring: count=distinct_instances, angle=360, equal_spacing=True.\n    (Example: a gear analyzed as 30 @ 15° equal_spacing=False has distinct_instances=24 → reproduce as\n    either 30 @ 15° False or 24 @ 360° True; both yield the same 24 teeth.)\npattern_type='mirror': mirrors one or more FEATURES about a plane. features_json = a JSON array of\n    feature tree names, e.g. '[\"Edge-Flange1\",\"Sketched Bend2\"]' (feature_name works for a single\n    feature). plane = the mirror plane name ('Right Plane' default; canonical English default-plane\n    names work on any localization, or a created reference plane's name). geometry_pattern=True\n    mirrors the geometry without solving each feature (faster; default False = SW default).\n    Round-trip: analyze_model(features) reports a MirrorPattern's mirror:{plane, features} — replay\n    those values verbatim. feature_name/spacing/count/direction/axis params are ignored for mirror.\nOn COMPLETED the result includes result_geometry {volume, faces, edges} after the pattern — verify from\n    this instead of a separate analyze_model.\nReturns the created pattern feature name.",
+   "input_schema": {
+    "properties": {
+     "pattern_type": {
+      "enum": [
+       "linear",
+       "circular",
+       "mirror"
+      ],
+      "type": "string"
+     },
+     "feature_name": {
+      "default": "",
+      "type": "string"
+     },
+     "spacing": {
+      "default": 0.01,
+      "description": "Linear pattern spacing in METERS",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "count": {
+      "default": 2,
+      "description": "Total instances incl. seed (>= 2)",
+      "minimum": 2,
+      "type": "integer"
+     },
+     "direction": {
+      "default": "X",
+      "enum": [
+       "X",
+       "Y",
+       "Z"
+      ],
+      "type": "string"
+     },
+     "count2": {
+      "default": 1,
+      "description": "Second-direction instances (1 = off)",
+      "minimum": 1,
+      "type": "integer"
+     },
+     "spacing2": {
+      "default": 0.01,
+      "description": "Second-direction spacing in METERS",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "flip": {
+      "default": false,
+      "type": "boolean"
+     },
+     "axis_name": {
+      "default": "",
+      "type": "string"
+     },
+     "angle": {
+      "default": 90.0,
+      "description": "Circular pattern angle in DEGREES",
+      "exclusiveMinimum": 0,
+      "maximum": 360,
+      "type": "number"
+     },
+     "equal_spacing": {
+      "default": true,
+      "type": "boolean"
+     },
+     "features_json": {
+      "default": "[]",
+      "type": "string"
+     },
+     "plane": {
+      "default": "",
+      "type": "string"
+     },
+     "geometry_pattern": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "pattern_type"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "set_part_material",
+   "description": "Assign a material to the active part document. Applied to all configurations.\nmaterial_name: exact library name (e.g. '1060 Alloy', 'AISI 1020', 'ABS') — must match the SOLIDWORKS Materials database exactly (e.g. '1060 Alloy', NOT 'Aluminum 1060 Alloy').\nlibrary: material library name (default 'SolidWorks Materials').\nThe applied material is visible in Mass Properties and the feature tree.\nRequires an active part document — not a drawing.",
+   "input_schema": {
+    "properties": {
+     "material_name": {
+      "type": "string"
+     },
+     "library": {
+      "default": "SolidWorks Materials",
+      "type": "string"
+     }
+    },
+    "required": [
+     "material_name"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "sheet_metal_feature",
+   "description": "Create sheet metal features on the active part.\nfeature_type='base_flange': creates a sheet metal base from the active sketch profile.\n    thickness: sheet thickness (meters). bend_radius: bend radius (default = thickness). k_factor: default 0.5.\n    reverse_thickness: thicken to the OPPOSITE side of the sketch plane (default False). Direction matters\n    for reproduction — when rebuilding an analyzed part, derive it from which side of the sketch plane the\n    original blank's big faces sit (e.g. feature_map's SMBaseFlange created faces).\n    symmetric_thickness: thicken BOTH ways off the sketch plane (±t/2, mid-plane style; default False).\n    When rebuilding, reproduce the original's own flag (analyze_model(features) reports it on the\n    SMBaseFlange) — the flags also set the intrinsic sheet orientation downstream bends fold against.\n    Exits sketch mode automatically.\nfeature_type='edge_flange': adds a DEFAULT-profile (full-edge-width) flange to an existing sheet metal\n    edge. Select the edge by edge_index (from analyze_model(edges), PREFERRED — a coordinate pick can\n    miss a real edge) or by a point (ex, ey, ez) on it.\n    flange_length: flange length (meters). angle: bend angle in degrees (default 90).\nfeature_type='edge_flange_sketch' + 'edge_flange_finish': the CUSTOM-profile edge flange, two calls.\n    edge_flange_sketch selects the attach edge — pass edge_index (from analyze_model(edges),\n    PREFERRED; a coordinate pick can miss a real edge) or ex/ey/ez — generates the edge-linked\n    profile sketch (the flange API accepts ONLY a sketch it generated), clears its default content\n    (clear_profile=True) and leaves it ACTIVE, echoing the sketch's MEASURED frame in the result —\n    express your profile coordinates in THAT frame. Draw the profile with add_sketch_entity, then\n    call edge_flange_finish with the SAME edge_index/coords (+ angle, bend_radius or\n    use_default_radius, bend_position from the original's edge_flange recipe block) to create the\n    flange. The custom profile itself defines the flange outline/length (flange_length is ignored).\nfeature_type='sketched_bend': bends the sheet about the bend LINE(S) in the ACTIVE sketch (draw the\n    line(s) on a sheet face with create_sketch + add_sketch_entity first — the sketch must still be\n    active). The side of the sheet that stays PUT is the fixed face: pass fixed_face_index (from\n    analyze_model(faces), PREFERRED — index-robust) or fixed_x/y/z (a 3D point ON that face, meters).\n    angle: bend angle in DEGREES (default 90). bend_radius: bend radius in meters, or set\n    use_default_radius=True to use the sheet's default (bend_radius is then ignored). flip: reverse\n    the bend direction (up vs down). bend_position: where the bend sits relative to the line —\n    'centerline' (default), 'material_inside', 'material_outside', or 'bend_outside' — matches the\n    `position` value analyze_model(features) reports on an SM3dBend, so a recipe value replays as-is.\n    A sketch with MULTIPLE bend lines creates one feature with one bend per line (like 4-1's Sketch6).\nfeature_type='flat_pattern': unfolds all bends to create the flat pattern view.\n    No additional parameters required. Requires an existing base_flange feature.",
+   "input_schema": {
+    "properties": {
+     "feature_type": {
+      "enum": [
+       "base_flange",
+       "edge_flange",
+       "edge_flange_sketch",
+       "edge_flange_finish",
+       "flat_pattern",
+       "sketched_bend"
+      ],
+      "type": "string"
+     },
+     "thickness": {
+      "default": 0.001,
+      "description": "Sheet thickness in METERS",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "bend_radius": {
+      "default": 0.001,
+      "description": "Bend radius in METERS",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "k_factor": {
+      "default": 0.5,
+      "description": "Neutral-axis K-factor (0..1)",
+      "exclusiveMaximum": 1,
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "ex": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "ey": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "ez": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "flange_length": {
+      "default": 0.02,
+      "description": "Edge flange length in METERS; use >= 2*thickness+1mm (KNOWN-LIMITATIONS #11)",
+      "exclusiveMinimum": 0,
+      "type": "number"
+     },
+     "angle": {
+      "default": 90.0,
+      "description": "Bend angle in DEGREES (edge_flange and sketched_bend; default 90)",
+      "exclusiveMinimum": 0,
+      "maximum": 180,
+      "type": "number"
+     },
+     "use_default_radius": {
+      "default": false,
+      "type": "boolean"
+     },
+     "flip": {
+      "default": false,
+      "type": "boolean"
+     },
+     "bend_position": {
+      "default": "centerline",
+      "enum": [
+       "centerline",
+       "material_inside",
+       "material_outside",
+       "bend_outside"
+      ],
+      "type": "string"
+     },
+     "fixed_face_index": {
+      "default": -1,
+      "type": "integer"
+     },
+     "fixed_x": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "fixed_y": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "fixed_z": {
+      "default": 0.0,
+      "type": "number"
+     },
+     "reverse_thickness": {
+      "default": false,
+      "type": "boolean"
+     },
+     "symmetric_thickness": {
+      "default": false,
+      "type": "boolean"
+     },
+     "clear_profile": {
+      "default": true,
+      "type": "boolean"
+     },
+     "edge_index": {
+      "default": -1,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "feature_type"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "modify_dimension",
+   "description": "Change a named display dimension's value — the UNIVERSAL parametric edit (variant keystone).\nname: the dimension full-name exactly as analyze_model(features) reports it, e.g.\n      'D1@Boss-Extrude1@Part.Part' or 'D1@Sketch1'.\nvalue: the new value in SI units — METERS for a length/distance, RADIANS for an angle\n      (e.g. 0.036 = 36mm; 0.5236 = 30°). NOT mm/degrees.\nWorkflow: analyze_model(analysis_type='features') → read a feature's dimension name + value (SI) →\n      modify_dimension(name, new_value) → analyze again to confirm. Bumps state_version (geometry\n      changes, unlike analyze). On COMPLETED the result carries result_geometry\n      {dimension, requested, effective}: the value read back from SolidWorks AFTER rebuild — verify\n      it matches your intent (an equation/relation may have driven it elsewhere). This is how you\n      build variants (e.g. resize a boss, widen a slot, change a gear's tooth-spacing).",
+   "input_schema": {
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "value": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "name",
+     "value"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "edit_feature",
+   "description": "Structurally edit an existing feature by name (suppress / unsuppress / delete / rename).\nfeature_name: exact feature-tree name, e.g. 'Boss-Extrude1', 'Cut-Extrude1', 'CirPattern1'\n      (get the names from analyze_model(analysis_type='features')).\naction='suppress':   removes the feature (and anything dependent on it) from the build WITHOUT deleting it.\naction='unsuppress': brings a suppressed feature back into the build.\naction='delete':     permanently removes the feature (works for ANY feature type, incl. sketches and reference geometry).\naction='rename':     renames the feature; requires new_name.\nnew_name: required only for action='rename' (ignored otherwise).\nBumps state_version. WARNING: suppress and delete CHANGE the model topology, so any coordinate /\nedge / face selection captured earlier may no longer resolve — re-run analyze_model\n(analysis_type='edges' or 'features') after a structural edit before selecting geometry again.",
+   "input_schema": {
+    "properties": {
+     "feature_name": {
+      "type": "string"
+     },
+     "action": {
+      "enum": [
+       "suppress",
+       "unsuppress",
+       "delete",
+       "rename"
+      ],
+      "type": "string"
+     },
+     "new_name": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "required": [
+     "feature_name",
+     "action"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "activate_document",
+   "description": "Switch the ACTIVE SolidWorks document to an already-open one by its title (e.g. 'gear' or\n'gear.SLDPRT'). Use this to read/compare another open part — e.g. activate the original, analyze_model\nit, then activate your copy — without OS window switching. Does NOT change geometry or state_version.\nThe document must already be OPEN. Returns the now-active document title.",
+   "input_schema": {
+    "properties": {
+     "title": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "title"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "save_analysis",
+   "description": "Analyze a part FILE and persist its analysis ARTIFACT — the entry tool of the analysis\npipeline. Opens the part (activates it if already open), runs the standard reads (features\nrecipe + mass_properties + geometry), computes the file's sha256, and writes\n`<folder>/.solidpilot/<filename>.analysis.json` per\ncad-planner/contracts/analysis-artifact.schema.json.\n\nThe artifact is a CACHE of the file's state at analysis time: consumers must compare\nidentity.source_hash against the current file and re-analyze on a mismatch. The `ir` block\nis left null here — the AI/IR pass fills it later: BEFORE writing an ir.graph, read the MCP\nresource `recipe://usage/index` for the mapping rules. The part is left OPEN and\nACTIVE for follow-up work.\n\nfile_path: absolute path of the .SLDPRT part OR .SLDASM assembly to analyze (drawing\n    artifacts arrive with later pipeline steps). An assembly artifact's recipe holds the\n    component tree (tree order, full transforms) + mates (creation order, enum types,\n    entity anchors) + assembly mass properties.\nReturns a token-frugal summary (artifact path + counts) — the artifact JSON stays on disk;\nread it from there when the full content is needed.",
+   "input_schema": {
+    "properties": {
+     "file_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "file_path"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "rebuild_from_ir",
+   "description": "Rebuild a part from its analysis artifact's Feature Graph IR — the verification half of\nthe round-trip (\"the LLM proposes, the round-trip decides\", IR-ADR-006). Reads\n`<...>.analysis.json`, takes `ir.graph`, and executes it through the SAME deterministic\npycompiler as the forward door submit_feature_graph (two doors, ONE compiler — never forked).\n\nfresh_document (default True): open a NEW blank part first — the normal round-trip flow\n    (rebuild fresh, then compare_parts against the original). Pass False only if you have\n    already prepared the target document yourself.\n\nThe rebuild reproduces the part AS-ANALYZED. If the source file changed since the artifact\nwas written (hash mismatch) the result carries source_stale=true — re-run save_analysis and\nregenerate the IR rather than trusting a stale graph.\n\nReturns the compiler's per-node summary (COMPLETED n/n, or the feature-level error and how\nfar it got — partial geometry may remain; CAD ops are not transactional). Afterwards, verify\nwith compare_parts and only then label the artifact's ir.verification. If you are GENERATING\nthe ir.graph yourself, read the MCP resource `recipe://usage/index` first — it indexes the\nmapping/canonicalization rules the compiler expects.",
+   "input_schema": {
+    "properties": {
+     "artifact_path": {
+      "type": "string"
+     },
+     "fresh_document": {
+      "default": true,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "artifact_path"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "compare_parts",
+   "description": "Objectively diff two part documents — the round-trip verifier behind the artifact's\n`verified` label (and a general-purpose \"are these the same part?\" check).\n\ndoc_a / doc_b: EITHER an absolute .SLDPRT path (opened/activated from disk) OR the TITLE of\n    an already-open document (e.g. 'Part4' for an unsaved rebuild). doc_a is the REFERENCE\n    (deltas are relative to it — normally the original; doc_b = the rebuild).\n\nFor each doc it runs analyze_model(geometry + mass_properties) and reports topology\n(bodies/faces/edges/vertices), volume, surface area and CG side by side with deltas, plus\nthe DECIDED verified-criteria verdict (analysis-artifact.schema.json): topology EXACT AND\n|ΔV| <= 1% AND |ΔA| <= 1%. The verdict is a REPORT — writing ir.verification into the\nartifact stays the caller's job. Read-only geometry-wise (activation may switch the active\ndocument; doc_b is left active). bbox comparison: pending (analyze doesn't expose it yet).\n\ndetail='faces' (optional): ALSO run analyze_model(faces) on both and list the surfaces that\n    are EXTRA (in doc_b only) or MISSING (in doc_a only), matched by supporting plane (normal\n    + offset) for planar faces and by (axis, radius) for cylinders. This is the ONE diagnosis a\n    point-query can't do — it turns \"which face did my rebuild add/drop?\" into one call instead\n    of manually pairing two full face lists. Faces are reported with their key attributes + the\n    stable index `i` in their own document.",
+   "input_schema": {
+    "properties": {
+     "doc_a": {
+      "type": "string"
+     },
+     "doc_b": {
+      "type": "string"
+     },
+     "detail": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "required": [
+     "doc_a",
+     "doc_b"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "compare_assemblies",
+   "description": "Objectively diff two ASSEMBLY documents against the RATIFIED verified criteria\n(ADR-047): component set EXACT (source file + config + instance counts) AND every\ncomponent transform within tolerance (position <= 1µm, rotation <= 1e-6) AND mate\ncount + types match AND mass properties within the V1 thresholds (|dV| <= 1%, |dA| <= 1%).\n\ndoc_a / doc_b: EITHER an absolute .SLDASM path OR the TITLE of an already-open document\n    (e.g. 'Assem2' for an unsaved rebuild). doc_a is the REFERENCE (the original).\n\nComponents are paired by (source basename, instance ordinal in tree order) — instance\nnumbering may legitimately differ between original and rebuild. The verdict is a REPORT;\nwriting ir.verification into the artifact stays the caller's job. doc_b is left active.",
+   "input_schema": {
+    "properties": {
+     "doc_a": {
+      "type": "string"
+     },
+     "doc_b": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "doc_a",
+     "doc_b"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  },
+  {
+   "name": "submit_feature_graph",
+   "description": "Build a part (or assembly) from a Feature Graph IR in ONE call — the deterministic\ncompiler lowers each IR node to the right low-level tool sequence and resolves references\n(geometric anchors, runtime feature names) against live geometry.\n\n★ PRIMARY BUILD PATH — prefer this whenever you are CREATING a part/assembly (including a\nreverse reconstruction from a drawing). Assemble the WHOLE feature graph and submit it ONCE;\ndo NOT hand-build feature-by-feature with the individual low-level tools\n(create_sketch/extrude_feature/add_edge_feature/…). One graph keeps tree order intact, lets\nthe compiler resolve anchors + runtime feature names deterministically, and takes far fewer\nround-trips. The low-level tools are for RECOVERY (re-doing one failed node), a genuine\none-off edit, or a feature the IR vocabulary cannot yet express — not for routine\nconstruction. If you truly cannot express the whole part in one graph yet, still submit the\nLARGEST coherent batches (fresh_document=True for the first, append with fresh_document=False),\nnever one node at a time.\n\ngraph: the Feature Graph as a JSON STRING. Authoring from DESIGN INTENT: read the MCP resource\n    `recipe://usage/forward` FIRST (grammar, anchor design, self-verification), plus\n    `schema://feature-graph` — the schema IS the capability registry.\n    Replaying an ANALYZED part instead: `recipe://usage/canonicalization` +\n    `recipe://usage/mapping_part` (…/mapping_sheet_metal, …/mapping_assembly).\n    Essentials: units METERS, angles RADIANS (the compiler converts at tool boundaries);\n    nodes build in array order (tree order is law); extrude/revolve/rib/sweep/sheet_metal/\n    sketched_bend consume the IMMEDIATELY preceding sketch node; loft profiles, a sweep's\n    path, pattern seeds and mirror features reference EARLIER nodes by id; an optional\n    graph-level material {name, library?} applies after the last node.\nfresh_document (default True): open a new blank document first — part graphs a part,\n    assembly graphs (component/mate nodes) an assembly. Pass False to build into the\n    CURRENT active document instead.\n\nReturns the compiler's per-node report: COMPLETED n/n, or FAILED with a feature-level error\nand how far it got. CAD ops are NOT transactional — on failure partial geometry remains\n(reported, never hidden). The adapter resyncs state_version after every run, so subsequent\nnormal tools keep working. Verify the result objectively (analyze_model / compare_parts) —\nnever assume.",
+   "input_schema": {
+    "properties": {
+     "graph": {
+      "type": "string"
+     },
+     "fresh_document": {
+      "default": true,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "graph"
+    ],
+    "type": "object",
+    "additionalProperties": false
+   }
+  }
+ ]
+}

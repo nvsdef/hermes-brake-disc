@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "prd_revision": "H1.2",
+  "note": "Pinned workstation environment. scripts/preflight.ps1 checks a machine against this file. Values marked observed were measured live on the author's workstation on 2026-11-02.",
+  "conventions": {
+    "solidpilot_root": "C:/solidpilot",
+    "runs_root": "C:/brake-runs",
+    "ansys_runtime_dir": "C:/brake-runs/_ansys-runtime",
+    "hermes_profile": "brake"
+  },
+  "solidworks": {
+    "product": "SOLIDWORKS 2026",
+    "required_major_version": 34,
+    "observed_version": "34.3.2"
+  },
+  "solidpilot": {
+    "server_script": "adapters/claude/server.py",
+    "python": ".venv/Scripts/python.exe",
+    "tool_count": 46,
+    "include_count": 17,
+    "inventory": "mcp/solidpilot-tools.json",
+    "observed_source_head": "a81d12ba3752d6282c42a4922e87db8dc26b3f69",
+    "observed_source_head_date": "2026-11-02"
+  },
+  "ansys": {
+    "release": "2026 R1 (v261)",
+    "awp_root_default": "C:/Program Files/ANSYS Inc/ANSYS Student/v261",
+    "executables": {
+      "fluent": "fluent/ntbin/win64/fluent.exe",
+      "spaceclaim": "scdm/SpaceClaim.exe"
+    }
+  },
+  "ansys_agent": {
+    "server_script": "ansys_mcp_server.py",
+    "python": ".venv/Scripts/python.exe",
+    "tool_count": 10,
+    "inventory": "mcp/ansys-tools.json",
+    "observed_python": "3.11.9",
+    "required_packages": {
+      "ansys-geometry-core": "0.15.5",
+      "ansys-fluent-core": "0.41.0"
+    },
+    "observed_packages": {
+      "ansys-platform-instancemanagement": "1.1.2",
+      "ansys-units": "0.12.1",
+      "grpcio": "1.83.0",
+      "numpy": "2.4.6",
+      "mcp": "1.28.1",
+      "pyvista": "0.48.4",
+      "reportlab": "5.0.1",
+      "pypdf": "6.16.2",
+      "PyMuPDF": "1.28.2",
+      "pillow": "12.3.0"
+    }
+  }
+}

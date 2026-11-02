@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "run_id": null,
+  "prd_revision": "H1.2",
+  "status": "pending",
+  "stage": "preflight",
+  "model": null,
+  "lead_session_id": null,
+  "delegation_budget": null,
+  "specialist_sessions": {},
+  "document_identities": {},
+  "owned_processes": [],
+  "jobs": [],
+  "completed_gates": [],
+  "measurements": {},
+  "frozen_hashes": {},
+  "repairs": {},
+  "findings": [],
+  "artifacts": {},
+  "timing": {}
+}

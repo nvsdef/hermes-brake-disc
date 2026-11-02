@@ -1,0 +1,23 @@
+{
+  "servers": {
+    "solidpilot": {
+      "command": "C:/solidpilot/.venv/Scripts/python.exe",
+      "args": ["C:/solidpilot/adapters/claude/server.py"],
+      "cwd": "C:/solidpilot/adapters/claude",
+      "timeout": 180,
+      "env": {"PYTHONIOENCODING": "utf-8"}
+    },
+    "ansys": {
+      "command": "{{ANSYS_AGENT_ROOT}}/.venv/Scripts/python.exe",
+      "args": ["{{ANSYS_AGENT_ROOT}}/ansys_mcp_server.py"],
+      "cwd": "C:/brake-runs",
+      "timeout": 180,
+      "env": {
+        "ANSYS_RUNTIME_DIR": "C:/brake-runs/_ansys-runtime",
+        "ANSYS_VENV_PYTHON": "{{ANSYS_AGENT_ROOT}}/.venv/Scripts/python.exe",
+        "AWP_ROOT261": "{{AWP_ROOT261}}",
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}

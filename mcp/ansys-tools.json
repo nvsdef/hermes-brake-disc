@@ -1,0 +1,225 @@
+{
+ "server": "ansys",
+ "captured": "2026-09-21",
+ "revalidated": "2026-11-02",
+ "revalidation": "names, required args and property names compared against the live server",
+ "tool_count": 10,
+ "tools": [
+  {
+   "name": "run_ansys_script",
+   "description": "\n    Execute a Python script against the local pyansys installation, BLOCKING\n    until it finishes.\n\n    Use this only for work that finishes in well under two minutes. The MCP\n    transport times out sooner than `timeout_seconds` does, and when it fires\n    you lose the result even though the script keeps running. For meshing,\n    solving, or sweeps, use submit_ansys_job instead.\n\n    The script runs in the ansys-agent venv (has pyansys-geometry,\n    ansys-fluent-core, etc.) with access to your Ansys install.\n\n    Args:\n        script_text: Full Python script text to run. Self-contained.\n        script_name: Optional filename for saving (default: timestamp-based).\n        timeout_seconds: Kill the script if it hasn't finished (default 3600).\n\n    Returns:\n        Dict with: exit_code, stdout, stderr, script_path, duration_seconds.\n    ",
+   "input_schema": {
+    "properties": {
+     "script_text": {
+      "title": "Script Text",
+      "type": "string"
+     },
+     "script_name": {
+      "default": "",
+      "title": "Script Name",
+      "type": "string"
+     },
+     "timeout_seconds": {
+      "default": 3600,
+      "title": "Timeout Seconds",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "script_text"
+    ],
+    "title": "run_ansys_scriptArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "submit_ansys_job",
+   "description": "\n    Start a Python script in the background and return immediately.\n\n    This is the right tool for Fluent meshing, transient solves, and parameter\n    sweeps -- anything that outlives an MCP call. The job is fully detached: it\n    keeps running if this server restarts or the Claude session ends.\n\n    Poll it with job_status(job_id). Fluent prints iteration progress to stdout,\n    so the tail is genuinely informative while a solve runs.\n\n    Args:\n        script_text: Full Python script text. Self-contained.\n        job_name: Optional label; a timestamp is appended to keep it unique.\n        cwd: Working directory for the script. Defaults to the project root.\n             Set this to the case directory so output files land there.\n\n    Returns:\n        Dict with job_id, job_dir, state, and the paths it will write.\n    ",
+   "input_schema": {
+    "properties": {
+     "script_text": {
+      "title": "Script Text",
+      "type": "string"
+     },
+     "job_name": {
+      "default": "",
+      "title": "Job Name",
+      "type": "string"
+     },
+     "cwd": {
+      "default": "",
+      "title": "Cwd",
+      "type": "string"
+     }
+    },
+    "required": [
+     "script_text"
+    ],
+    "title": "submit_ansys_jobArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "job_status",
+   "description": "\n    Check a background job, optionally waiting a little for it to finish.\n\n    Args:\n        job_id: From submit_ansys_job.\n        tail_lines: How many trailing stdout lines to include (default 30).\n        wait_seconds: Block up to this long waiting for completion. CAPPED AT\n            60. Measured: wait_seconds=90 exceeded the MCP transport timeout and\n            the call was lost (the job was unharmed). 45-50 is comfortable.\n            0 returns immediately.\n\n    Returns:\n        Dict with state (running|succeeded|failed|lost), exit_code, elapsed\n        seconds, and tails of stdout/stderr.\n    ",
+   "input_schema": {
+    "properties": {
+     "job_id": {
+      "title": "Job Id",
+      "type": "string"
+     },
+     "tail_lines": {
+      "default": 30,
+      "title": "Tail Lines",
+      "type": "integer"
+     },
+     "wait_seconds": {
+      "default": 0,
+      "title": "Wait Seconds",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "job_id"
+    ],
+    "title": "job_statusArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "job_log",
+   "description": "\n    Read a job's full log.\n\n    Args:\n        job_id: From submit_ansys_job.\n        stream: \"stdout\" or \"stderr\".\n        max_chars: Truncate from the FRONT beyond this, keeping the tail --\n            the end of a solver log is the interesting part.\n\n    Returns:\n        Dict with text, truncated flag, and total_chars.\n    ",
+   "input_schema": {
+    "properties": {
+     "job_id": {
+      "title": "Job Id",
+      "type": "string"
+     },
+     "stream": {
+      "default": "stdout",
+      "title": "Stream",
+      "type": "string"
+     },
+     "max_chars": {
+      "default": 40000,
+      "title": "Max Chars",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "job_id"
+    ],
+    "title": "job_logArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "job_cancel",
+   "description": "\n    Kill a running job and its whole process tree, including Fluent itself.\n\n    Args:\n        job_id: From submit_ansys_job.\n\n    Returns:\n        Dict with the resulting state.\n    ",
+   "input_schema": {
+    "properties": {
+     "job_id": {
+      "title": "Job Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "job_id"
+    ],
+    "title": "job_cancelArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "job_list",
+   "description": "\n    List submitted jobs, newest first.\n\n    Args:\n        limit: Maximum number to return (default 20).\n\n    Returns:\n        List of dicts with job_id, state, exit_code, submitted_at, cwd.\n    ",
+   "input_schema": {
+    "properties": {
+     "limit": {
+      "default": 20,
+      "title": "Limit",
+      "type": "integer"
+     }
+    },
+    "title": "job_listArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "read_json_file",
+   "description": "\n    Read a JSON file (results.json, params.json, etc.).\n\n    Args:\n        file_path: Absolute path or relative to project root.\n\n    Returns:\n        Parsed JSON dict, or {\"error\": \"...\"}.\n    ",
+   "input_schema": {
+    "properties": {
+     "file_path": {
+      "title": "File Path",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file_path"
+    ],
+    "title": "read_json_fileArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "list_case_results",
+   "description": "\n    List all case-result directories under the given root, newest first.\n\n    Args:\n        results_root: Directory to search (default 'results' under the runtime dir).\n\n    Returns:\n        List of dicts with case_name, path, has_results_json, results_json_path.\n    ",
+   "input_schema": {
+    "properties": {
+     "results_root": {
+      "default": "results",
+      "title": "Results Root",
+      "type": "string"
+     }
+    },
+    "title": "list_case_resultsArguments",
+    "type": "object"
+   }
+  },
+  {
+   "name": "read_skill_reference",
+   "description": "\n    Read a reference sheet from the skills directory.\n\n    Args:\n        skill: \"spaceclaim-cad\" or \"ansys-fluent-cfd\".\n        sheet_name: Reference sheet filename (with or without .md extension).\n\n    Returns:\n        The reference sheet contents, or an error message.\n    ",
+   "input_schema": {
+    "properties": {
+     "skill": {
+      "title": "Skill",
+      "type": "string"
+     },
+     "sheet_name": {
+      "title": "Sheet Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "skill",
+     "sheet_name"
+    ],
+    "title": "read_skill_referenceArguments",
+    "type": "object"
+   },
+   "output_schema": {
+    "properties": {
+     "result": {
+      "title": "Result",
+      "type": "string"
+     }
+    },
+    "required": [
+     "result"
+    ],
+    "title": "read_skill_referenceOutput",
+    "type": "object"
+   }
+  },
+  {
+   "name": "list_skill_reference_sheets",
+   "description": "\n    List all available reference sheets by skill.\n\n    Returns:\n        Dict keyed by skill name, values are lists of sheet filenames.\n    ",
+   "input_schema": {
+    "properties": {},
+    "title": "list_skill_reference_sheetsArguments",
+    "type": "object"
+   }
+  }
+ ]
+}
