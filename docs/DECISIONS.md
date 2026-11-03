@@ -136,3 +136,13 @@ an end-to-end run of about 10 minutes, no report, no images.
     rename hits both (the stage script no longer renames bodies) and deleting one
     deletes both (only the calliper is ever deleted). Saves 3 part builds (about
     21 SolidPilot calls) at Gate 1.
+47. **The repository carries everything a new workstation needs.** The
+    ansys-agent MCP server (the author's own code) is vendored in
+    `mcp/ansys-agent` with an exact `requirements.lock.txt`; its venv lives
+    outside the repo (`C:\brake-tools\ansys-agent-venv`). SolidPilot (AGPL-3.0,
+    third party) is pinned, not copied: `mcp/solidpilot/SOURCE.md` names the
+    upstream commit `a81d12ba` (the author's checkout has no local changes),
+    with a lock file and `.env` template; its .NET execution service is built
+    on the target machine because it links the local SolidWorks interop.
+    `scripts/bootstrap_workstation.ps1` installs both; `install_profile.ps1`
+    renders Hermes and Claude MCP configs from them.

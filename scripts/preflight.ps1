@@ -18,6 +18,7 @@
 param(
     [string]$ProfileDir = "",
     [string]$AnsysAgentRoot = "",
+    [string]$AnsysAgentPython = "",
     [string]$AwpRoot = "",
     [switch]$McpTest,
     [switch]$SkipUnitTests
@@ -35,7 +36,12 @@ if (-not $ProfileDir) {
     if ($env:HERMES_HOME -and (Split-Path -Leaf $env:HERMES_HOME) -eq 'brake') { $ProfileDir = $env:HERMES_HOME }
     else { $ProfileDir = Join-Path $env:LOCALAPPDATA 'hermes\profiles\brake' }
 }
-if (-not $AnsysAgentRoot) { $AnsysAgentRoot = Join-Path (Split-Path -Parent $PackageRoot) 'ansys-agent' }
+if (-not $AnsysAgentRoot) { $AnsysAgentRoot = Join-Path $PackageRoot 'mcp\ansys-agent' }       # vendored server source
+if (-not $AnsysAgentPython) {
+    $AnsysAgentPython = 'C:\brake-tools\ansys-agent-venv\Scripts\python.exe'                # created by bootstrap_workstation.ps1
+    $legacy = Join-Path $AnsysAgentRoot '.venv\Scripts\python.exe'
+    if (-not (Test-Path -LiteralPath $AnsysAgentPython) -and (Test-Path -LiteralPath $legacy)) { $AnsysAgentPython = $legacy }
+}
 if (-not $AwpRoot) {
     if ($env:AWP_ROOT261) { $AwpRoot = $env:AWP_ROOT261 } else { $AwpRoot = $envSpec.ansys.awp_root_default.Replace('/', '\') }
 }
@@ -86,7 +92,7 @@ if (Test-Path -LiteralPath $spHeadFile) {
 # 3. Ansys + ansys-agent --------------------------------------------------------
 Check-Path 'Ansys v261 root' $AwpRoot
 foreach ($p in $envSpec.ansys.executables.PSObject.Properties) { Check-Path "Ansys $($p.Name) executable" (Join-Path $AwpRoot $p.Value.Replace('/', '\')) }
-$aaPy = Join-Path $AnsysAgentRoot '.venv\Scripts\python.exe'
+$aaPy = $AnsysAgentPython
 Check-Path 'ansys-agent python' $aaPy
 Check-Path 'ansys-agent server' (Join-Path $AnsysAgentRoot 'ansys_mcp_server.py')
 if (Test-Path -LiteralPath $aaPy) {

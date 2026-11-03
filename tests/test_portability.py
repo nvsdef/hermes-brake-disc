@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 TEXT_SUFFIXES = {'.md', '.json', '.yaml', '.yml', '.ps1', '.py', '.txt'}
-PLACEHOLDERS = {'{{PACKAGE_ROOT}}', '{{ANSYS_AGENT_ROOT}}', '{{AWP_ROOT261}}'}
+PLACEHOLDERS = {'{{PACKAGE_ROOT}}', '{{ANSYS_AGENT_ROOT}}', '{{ANSYS_AGENT_PYTHON}}', '{{AWP_ROOT261}}'}
 
 # SolidPilot tools OUTSIDE the include filter that the docs are allowed to name.
 # Each one was reviewed on 2026-11-02 and is mentioned only as "do not call"
@@ -240,3 +240,36 @@ class FlippedTwinContractTests(unittest.TestCase):
     def test_spaceclaim_script_never_renames_bodies(self):
         sc = (ROOT / 'scripts/stages/spaceclaim_prep.py').read_text(encoding='utf-8')
         self.assertNotRegex(sc, r'^\s*b\.name\s*=', 'instances share a master body')
+
+
+class BundledMcpTests(unittest.TestCase):
+    """Everything a new workstation needs for the two MCP servers is in the repo."""
+
+    def test_ansys_agent_is_vendored_with_lock(self):
+        v = ROOT / 'mcp' / 'ansys-agent'
+        for rel in ('ansys_mcp_server.py', 'ansys_agent/__init__.py', 'skills/spaceclaim-cad/SKILL.md',
+                    'skills/ansys-fluent-cfd/SKILL.md', 'requirements.lock.txt', 'README.md'):
+            self.assertTrue((v / rel).is_file(), rel)
+        lock = (v / 'requirements.lock.txt').read_text(encoding='utf-8')
+        for pin in ('ansys-geometry-core==0.15.5', 'ansys-fluent-core==0.41.0', 'mcp=='):
+            self.assertIn(pin, lock)
+        server = (v / 'ansys_mcp_server.py').read_text(encoding='utf-8')
+        for tool in json.loads((ROOT / 'mcp' / 'ansys-tools.json').read_text(encoding='utf-8'))['tools']:
+            self.assertIn('def ' + tool['name'] + '(', server, tool['name'])
+        for junk in ('.venv', 'jobs', 'results', 'viewport', 'kit_ext'):
+            self.assertFalse((v / junk).exists(), junk)
+
+    def test_solidpilot_is_pinned_with_lock(self):
+        s = ROOT / 'mcp' / 'solidpilot'
+        src = (s / 'SOURCE.md').read_text(encoding='utf-8')
+        env = json.loads((ROOT / 'profile' / 'environment.json').read_text(encoding='utf-8'))
+        self.assertIn(env['solidpilot']['observed_source_head'], src)
+        boot = (ROOT / 'scripts' / 'bootstrap_workstation.ps1').read_text(encoding='utf-8')
+        self.assertIn(env['solidpilot']['observed_source_head'], boot)
+        self.assertIn('mcp==2.0.0', (s / 'requirements.lock.txt').read_text(encoding='utf-8'))
+        self.assertTrue((s / 'env.template').is_file())
+
+    def test_claude_mcp_template_registers_both_servers(self):
+        cfg = json.loads((ROOT / 'profile' / 'claude_mcp_servers.template.json').read_text(encoding='utf-8'))
+        self.assertEqual(set(cfg['mcpServers']), {'solidpilot', 'ansys-agent'})
+        self.assertEqual(cfg['mcpServers']['ansys-agent']['env']['ANSYS_RUNTIME_DIR'], 'C:/brake-runs/_ansys-runtime')

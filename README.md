@@ -28,6 +28,8 @@ profile).
 - **Fast profile run end to end on 2026-11-02** (run 4, Claude agents): all gates
   PASS first time in **12.3 min** (CAD 5.4, SpaceClaim 1.4, Fluent 3.7).
   Not yet run under Hermes.
+- **Self-contained:** both MCP servers install from this repo
+  (`scripts/bootstrap_workstation.ps1`), see `docs/SETUP.md` section 1.
 
 ## Layout
 | Path | What |
@@ -41,7 +43,12 @@ profile).
 | `profile/config.template.yaml` | The complete `brake` profile `config.yaml`, with 3 machine placeholders. |
 | `profile/SOUL.md` | The lead's profile SOUL (system prompt; survives compaction). |
 | `profile/environment.json` | Pinned versions, paths and tool counts that preflight checks. |
+| `mcp/ansys-agent/` | The Ansys MCP server (vendored source + `requirements.lock.txt`). |
+| `mcp/solidpilot/` | SolidPilot pin (`SOURCE.md`: upstream + commit), `requirements.lock.txt`, `.env` template. |
 | `mcp/*-tools.json` | Tool inventories (names and argument schemas) of the SolidPilot (46) and Ansys (10) servers. |
+| `profile/claude_mcp_servers.template.json` | MCP registration for Claude Desktop / Cowork. |
+| `scripts/bootstrap_workstation.ps1` | New machine: installs both MCP servers from the pins and locks. |
+| `docs/RUN_WITH_CLAUDE.md`, `examples/prompt-claude.md` | Running with Claude as the lead (how runs 3 and 4 ran). |
 | `scripts/stages/*.py` | The two vetted stage scripts (SpaceClaim prep, Fluent mesh + heat-up), launched by their specialist. |
 | `scripts/install_profile.ps1` | Renders the profile for this workstation. |
 | `scripts/preflight.ps1` | Read-only machine check: PASS/WARN/FAIL per item. |
@@ -56,14 +63,15 @@ profile).
 
 ## Quick start (any workstation)
 ```powershell
-gh repo clone <owner>/hermes-brake-disc; cd hermes-brake-disc
-hermes profile create brake --clone            # once per machine
-powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1 -AnsysAgentRoot "<path>\ansys-agent"
-powershell -ExecutionPolicy Bypass -File scripts\preflight.ps1 -McpTest   # must end "0 FAIL"
-hermes -p brake chat                           # from this folder, no -t flag
+gh repo clone nvsdef/hermes-brake-disc; cd hermes-brake-disc
+powershell -ExecutionPolicy Bypass -File scripts\bootstrap_workstation.ps1   # SolidPilot + ansys-agent MCPs
+hermes profile create brake --clone                                            # Hermes only, once
+powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1
+powershell -ExecutionPolicy Bypass -File scripts\preflight.ps1 -McpTest       # must end "0 FAIL"
 ```
-Then paste `examples/readiness-prompt.md`, then `examples/prompt.md`. Details
-and prerequisites are in `docs/SETUP.md`.
+Then either `hermes -p brake chat` from this folder and paste `examples/prompt.md`,
+or open Claude Cowork on this folder and paste `examples/prompt-claude.md`
+(`docs/RUN_WITH_CLAUDE.md`). Prerequisites and details: `docs/SETUP.md`.
 
 Run output goes to `C:\brake-runs\<run-id>\`. Tests:
 `C:/solidpilot/.venv/Scripts/python.exe -B -m unittest discover -s tests -v`.

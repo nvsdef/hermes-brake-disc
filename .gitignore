@@ -4,3 +4,8 @@ __pycache__/
 .venv/
 BUILD_STATE.json
 runs/
+mcp/ansys-agent/.venv/
+mcp/ansys-agent/jobs/
+mcp/ansys-agent/scripts/
+mcp/ansys-agent/results/
+*.trn

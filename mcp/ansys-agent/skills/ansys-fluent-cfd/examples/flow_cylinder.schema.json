@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Flow Around Cylinder - Dimension Table",
+  "description": "Parameters for a 2.5D channel-with-cylindrical-obstacle CFD case.",
+  "type": "object",
+  "required": [
+    "case_name",
+    "domain",
+    "cylinder",
+    "flow"
+  ],
+  "properties": {
+    "case_name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "description": "Short slug used for output filenames. Letters, digits, dash, underscore only."
+    },
+    "domain": {
+      "type": "object",
+      "required": [
+        "length_m",
+        "height_m",
+        "depth_m"
+      ],
+      "properties": {
+        "length_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Channel length (X, flow direction)"
+        },
+        "height_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Channel height (Y, cross-flow)"
+        },
+        "depth_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Channel depth (Z). Keep thin for 2.5D."
+        }
+      }
+    },
+    "cylinder": {
+      "type": "object",
+      "required": [
+        "radius_m",
+        "x_m",
+        "y_m"
+      ],
+      "properties": {
+        "radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Cylinder radius"
+        },
+        "x_m": {
+          "type": "number",
+          "description": "Cylinder center X (from inlet)"
+        },
+        "y_m": {
+          "type": "number",
+          "description": "Cylinder center Y (0 = channel centerline)"
+        }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": [
+        "inlet_velocity_mps",
+        "fluid_material"
+      ],
+      "properties": {
+        "inlet_velocity_mps": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Uniform inlet velocity normal to inlet face"
+        },
+        "fluid_material": {
+          "type": "string",
+          "enum": [
+            "water-liquid",
+            "air"
+          ],
+          "default": "water-liquid"
+        }
+      }
+    },
+    "mesh": {
+      "type": "object",
+      "properties": {
+        "min_size_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.002
+        },
+        "max_size_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.02
+        },
+        "growth_rate": {
+          "type": "number",
+          "minimum": 1.0,
+          "default": 1.2
+        }
+      }
+    },
+    "solver": {
+      "type": "object",
+      "properties": {
+        "iterations": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 150
+        },
+        "turbulence_model": {
+          "type": "string",
+          "enum": [
+            "k-omega-sst",
+            "laminar"
+          ],
+          "default": "k-omega-sst"
+        }
+      }
+    }
+  }
+}

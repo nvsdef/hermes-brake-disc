@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "solidpilot": {
+      "command": "C:/solidpilot/.venv/Scripts/python.exe",
+      "args": [
+        "C:/solidpilot/adapters/claude/server.py"
+      ],
+      "cwd": "C:/solidpilot/adapters/claude",
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    },
+    "ansys-agent": {
+      "command": "{{ANSYS_AGENT_PYTHON}}",
+      "args": [
+        "{{ANSYS_AGENT_ROOT}}/ansys_mcp_server.py"
+      ],
+      "cwd": "C:/brake-runs",
+      "env": {
+        "ANSYS_RUNTIME_DIR": "C:/brake-runs/_ansys-runtime",
+        "ANSYS_VENV_PYTHON": "{{ANSYS_AGENT_PYTHON}}",
+        "AWP_ROOT261": "{{AWP_ROOT261}}",
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}

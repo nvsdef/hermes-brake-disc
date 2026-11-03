@@ -8,13 +8,13 @@
       "env": {"PYTHONIOENCODING": "utf-8"}
     },
     "ansys": {
-      "command": "{{ANSYS_AGENT_ROOT}}/.venv/Scripts/python.exe",
+      "command": "{{ANSYS_AGENT_PYTHON}}",
       "args": ["{{ANSYS_AGENT_ROOT}}/ansys_mcp_server.py"],
       "cwd": "C:/brake-runs",
       "timeout": 180,
       "env": {
         "ANSYS_RUNTIME_DIR": "C:/brake-runs/_ansys-runtime",
-        "ANSYS_VENV_PYTHON": "{{ANSYS_AGENT_ROOT}}/.venv/Scripts/python.exe",
+        "ANSYS_VENV_PYTHON": "{{ANSYS_AGENT_PYTHON}}",
         "AWP_ROOT261": "{{AWP_ROOT261}}",
         "PYTHONIOENCODING": "utf-8"
       }

@@ -1,0 +1,4 @@
+﻿ansys-fluent-core
+ansys-geometry-core
+ansys-mechanical-core
+jsonschema

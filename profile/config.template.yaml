@@ -218,13 +218,13 @@ mcp_servers:
         - activate_document
         - close_document
   ansys:
-    command: "{{ANSYS_AGENT_ROOT}}/.venv/Scripts/python.exe"
+    command: "{{ANSYS_AGENT_PYTHON}}"
     args:
       - "{{ANSYS_AGENT_ROOT}}/ansys_mcp_server.py"
     cwd: C:/brake-runs                   # BRAKE: keep Ansys scratch out of OneDrive
     env:
       ANSYS_RUNTIME_DIR: C:/brake-runs/_ansys-runtime   # BRAKE
-      ANSYS_VENV_PYTHON: "{{ANSYS_AGENT_ROOT}}/.venv/Scripts/python.exe"
+      ANSYS_VENV_PYTHON: "{{ANSYS_AGENT_PYTHON}}"
       AWP_ROOT261: "{{AWP_ROOT261}}"
       PYTHONIOENCODING: utf-8
     connect_timeout: 60.0

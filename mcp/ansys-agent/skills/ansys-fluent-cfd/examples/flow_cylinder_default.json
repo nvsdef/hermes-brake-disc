@@ -1,0 +1,26 @@
+{
+  "case_name": "flow_cylinder_default",
+  "domain": {
+    "length_m": 0.6,
+    "height_m": 0.2,
+    "depth_m": 0.02
+  },
+  "cylinder": {
+    "radius_m": 0.02,
+    "x_m": 0.2,
+    "y_m": 0.0
+  },
+  "flow": {
+    "inlet_velocity_mps": 0.1,
+    "fluid_material": "water-liquid"
+  },
+  "mesh": {
+    "min_size_m": 0.002,
+    "max_size_m": 0.02,
+    "growth_rate": 1.2
+  },
+  "solver": {
+    "iterations": 150,
+    "turbulence_model": "k-omega-sst"
+  }
+}

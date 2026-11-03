@@ -11,46 +11,58 @@ These are pinned in `profile/environment.json`. `scripts/preflight.ps1` checks e
 |---|---|---|
 | Windows 11, Windows PowerShell 5.1 | yes | the scripts avoid PowerShell 7-only syntax |
 | SOLIDWORKS 2026 (major version 34), licensed | yes | validated on 34.3.2 (SP3.2) |
-| SolidPilot MCP at **`C:\solidpilot`** | yes, at that exact path | the skills call `C:/solidpilot/.venv/Scripts/python.exe` for arithmetic; validated at commit `a81d12ba` |
+| SolidPilot MCP at **`C:\solidpilot`** | installed by the bootstrap at that exact path | pinned commit `a81d12ba`; the skills call `C:/solidpilot/.venv/Scripts/python.exe` |
 | Ansys 2026 R1 (v261), Student is fine | yes | default root `C:\Program Files\ANSYS Inc\ANSYS Student\v261` |
-| `ansys-agent` MCP server with its `.venv` | yes | any folder; default is a sibling of this package. Pins: `ansys-geometry-core` 0.15.5, `ansys-fluent-core` 0.41.0, Python 3.11.9 |
+| `ansys-agent` MCP server | vendored in `mcp/ansys-agent`; venv from its lock file by the bootstrap | Pins: `ansys-geometry-core` 0.15.5, `ansys-fluent-core` 0.41.0, Python 3.11.9 |
 | Hermes, with a provider configured | yes | the template uses the NVIDIA inference endpoint; the API key comes from the env var named in `custom_providers.key_env`, never from this repo |
 | `C:\brake-runs\` | created by the installer | all run output goes there, never into OneDrive |
-| Git and GitHub CLI (`gh`) | only to clone/publish | `winget install Git.Git GitHub.cli` |
+| Git, GitHub CLI, Python 3.11, MSBuild | for the bootstrap | `winget install Git.Git GitHub.cli Python.Python.3.11 Microsoft.VisualStudio.2022.BuildTools` |
 
 The pyansys pins are exact on purpose: `api-verified.md` in the SpaceClaim and
 Fluent skills was built from those library versions.
 
 ## 1. New workstation, start to finish
+Everything the run needs is in this repository: the agents, skills, specs, the
+two stage scripts, the **ansys-agent MCP server** (vendored in `mcp/ansys-agent`)
+and the exact package locks for both MCP servers. **SolidPilot** is pinned to an
+upstream commit and cloned by the bootstrap (`mcp/solidpilot/SOURCE.md`).
+
 ```powershell
 # 1. Get the package (anywhere; OneDrive is fine for the SOURCE, never for run output)
-gh repo clone <owner>/hermes-brake-disc
+gh repo clone nvsdef/hermes-brake-disc
 cd hermes-brake-disc
 
-# 2. Create the profile once (this clones your default profile's provider + credentials)
+# 2. Install the two MCP servers: SolidPilot -> C:\solidpilot (pinned commit, venv,
+#    .NET execution service) and the ansys-agent venv -> C:\brake-tools\ansys-agent-venv.
+#    Needs git, Python 3.11 (py launcher), SOLIDWORKS 2026, Ansys v261, and MSBuild
+#    (Visual Studio 2022 or Build Tools 2022 with the .NET Framework 4.8 targeting pack).
+powershell -ExecutionPolicy Bypass -File scripts\bootstrap_workstation.ps1 -CheckOnly   # see what it will do
+powershell -ExecutionPolicy Bypass -File scripts\bootstrap_workstation.ps1
+
+# 3. Hermes only: create the profile once (clones your default profile's provider + credentials)
 hermes profile create brake --clone
 
-# 3. Render the profile for this machine (backs up any existing config.yaml / SOUL.md)
-powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1 -AnsysAgentRoot "<path-to>\ansys-agent"
+# 4. Render the configs for this machine: the Hermes profile, .local\servers.json and
+#    .local\claude_mcp_servers.json (backs up any existing config.yaml / SOUL.md)
+powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1
 
-# 4. Check the machine. Must end "0 FAIL". -McpTest starts each MCP server once to list tools.
+# 5. Check the machine. Must end "0 FAIL". -McpTest (Hermes) starts each server once.
 powershell -ExecutionPolicy Bypass -File scripts\preflight.ps1 -McpTest
 ```
-`install_profile.ps1` options: `-AnsysAgentRoot` (default `..\ansys-agent`),
-`-AwpRoot` (default `$env:AWP_ROOT261`, then the Student path) and `-ProfileDir`
-(default `%LOCALAPPDATA%\hermes\profiles\brake`, or `HERMES_HOME` when it names
-`brake`). It checks every input path first and writes nothing if one is missing.
-It writes exactly three files: `<profile>\config.yaml`, `<profile>\SOUL.md` and
-the git-ignored `.local\servers.json` for the diagnostic client. To look at the
-result without touching a real profile, pass
-`-ProfileDir "$env:TEMP\brake-test" -CreateProfileDir`.
+`install_profile.ps1` options: `-AnsysAgentRoot` (default the vendored
+`mcp\ansys-agent`), `-AnsysAgentPython` (default
+`C:\brake-tools\ansys-agent-venv\Scripts\python.exe`), `-AwpRoot` (default
+`$env:AWP_ROOT261`, then the Student path) and `-ProfileDir` (default
+`%LOCALAPPDATA%\hermes\profiles\brake`). It checks every input path first and
+writes nothing if one is missing. To look at the result without touching a real
+profile, pass `-ProfileDir "$env:TEMP\brake-test" -CreateProfileDir`.
 
-Then go to section 5 (Launch).
+Then run with Hermes (section 5) or with Claude (`docs/RUN_WITH_CLAUDE.md`).
 
 ## 2. What the profile contains, and why
 The single source is `profile/config.template.yaml`, a complete Hermes
-`config.yaml` with three placeholders: `{{PACKAGE_ROOT}}`, `{{ANSYS_AGENT_ROOT}}`
-and `{{AWP_ROOT261}}`. Lines marked `# BRAKE` differ from a default profile.
+`config.yaml` with four placeholders: `{{PACKAGE_ROOT}}`, `{{ANSYS_AGENT_ROOT}}`,
+`{{ANSYS_AGENT_PYTHON}}` and `{{AWP_ROOT261}}`. Lines marked `# BRAKE` differ from a default profile.
 
 **Native MCP servers (`mcp_servers`).** Hermes keeps one stdio process alive per
 server and puts every tool straight into the model's tool list, as

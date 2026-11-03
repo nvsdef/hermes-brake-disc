@@ -4,9 +4,10 @@
 
 .DESCRIPTION
   Writes, in this order, and nothing else:
-    1. <ProfileDir>\config.yaml   rendered from profile\config.template.yaml
+    1. <ProfileDir>\config.yaml   rendered from profile\config.template.yaml (Hermes)
     2. <ProfileDir>\SOUL.md       copied from profile\SOUL.md
     3. <package>\.local\servers.json  (diagnostic client config, git-ignored)
+    4. <package>\.local\claude_mcp_servers.json  (mcpServers block for Claude Desktop / Cowork)
   Any existing config.yaml / SOUL.md is backed up first as *.backup-<timestamp>.
   Creates C:\brake-runs and C:\brake-runs\_ansys-runtime if they are missing.
   Every input path is checked before anything is written; on any miss it stops
@@ -16,7 +17,7 @@
   profile folder (and its provider credentials) exists.
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1 -AnsysAgentRoot "D:\tools\ansys-agent"
+  powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1
 
 .EXAMPLE
   # Render into a scratch folder to inspect it, touching no real profile
@@ -26,6 +27,7 @@
 param(
     [string]$ProfileDir = "",
     [string]$AnsysAgentRoot = "",
+    [string]$AnsysAgentPython = "",
     [string]$AwpRoot = "",
     [switch]$CreateProfileDir
 )
@@ -49,7 +51,12 @@ if (-not $ProfileDir) {
     if ($env:HERMES_HOME -and (Split-Path -Leaf $env:HERMES_HOME) -eq 'brake') { $ProfileDir = $env:HERMES_HOME }
     else { $ProfileDir = Join-Path $env:LOCALAPPDATA 'hermes\profiles\brake' }
 }
-if (-not $AnsysAgentRoot) { $AnsysAgentRoot = Join-Path (Split-Path -Parent $PackageRoot) 'ansys-agent' }
+if (-not $AnsysAgentRoot) { $AnsysAgentRoot = Join-Path $PackageRoot 'mcp\ansys-agent' }       # vendored server source
+if (-not $AnsysAgentPython) {
+    $AnsysAgentPython = 'C:\brake-tools\ansys-agent-venv\Scripts\python.exe'                # created by bootstrap_workstation.ps1
+    $legacy = Join-Path $AnsysAgentRoot '.venv\Scripts\python.exe'
+    if (-not (Test-Path -LiteralPath $AnsysAgentPython) -and (Test-Path -LiteralPath $legacy)) { $AnsysAgentPython = $legacy }
+}
 if (-not $AwpRoot) {
     if ($env:AWP_ROOT261) { $AwpRoot = $env:AWP_ROOT261 }
     else { $AwpRoot = 'C:\Program Files\ANSYS Inc\ANSYS Student\v261' }
@@ -63,7 +70,7 @@ $checks = @(
     @{ what = 'lead skills dir';         path = (Join-Path $PackageRoot 'agents\lead\skills') },
     @{ what = 'SolidPilot python';       path = (Join-Path $SolidPilotRoot '.venv\Scripts\python.exe') },
     @{ what = 'SolidPilot server';       path = (Join-Path $SolidPilotRoot 'adapters\claude\server.py') },
-    @{ what = 'ansys-agent python';      path = (Join-Path $AnsysAgentRoot '.venv\Scripts\python.exe') },
+    @{ what = 'ansys-agent python';      path = $AnsysAgentPython },
     @{ what = 'ansys-agent server';      path = (Join-Path $AnsysAgentRoot 'ansys_mcp_server.py') },
     @{ what = 'Ansys v261 root';         path = $AwpRoot }
 )
@@ -85,6 +92,7 @@ if ($missing.Count -gt 0) {
 $values = @{
     '{{PACKAGE_ROOT}}'     = (To-Fwd $PackageRoot)
     '{{ANSYS_AGENT_ROOT}}' = (To-Fwd $AnsysAgentRoot)
+    '{{ANSYS_AGENT_PYTHON}}' = (To-Fwd $AnsysAgentPython)
     '{{AWP_ROOT261}}'      = (To-Fwd $AwpRoot)
 }
 function Render([string]$templatePath) {
@@ -97,6 +105,8 @@ function Render([string]$templatePath) {
 $config  = Render (Join-Path $PackageRoot 'profile\config.template.yaml')
 $servers = Render (Join-Path $PackageRoot 'profile\servers.template.json')
 $null = $servers | ConvertFrom-Json   # throws if the JSON is malformed
+$claude = Render (Join-Path $PackageRoot 'profile\claude_mcp_servers.template.json')
+$null = $claude | ConvertFrom-Json
 
 # ---- write --------------------------------------------------------------------
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -122,6 +132,8 @@ if (Test-Path -LiteralPath $srvPath) {
     Write-Host "  backup   $bak"
 }
 Write-Utf8NoBom $srvPath $servers
+$claudePath = Join-Path $localDir 'claude_mcp_servers.json'
+Write-Utf8NoBom $claudePath $claude
 
 foreach ($d in @($RunsRoot, (Join-Path $RunsRoot '_ansys-runtime'))) {
     if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null; Write-Host "  created  $d" }
@@ -134,6 +146,7 @@ foreach ($k in $values.Keys) { Write-Host ("  {0,-20} = {1}" -f $k, $values[$k])
 Write-Host ("  config.yaml  sha256 {0}  {1}" -f (Sha256 $cfgPath), $cfgPath)
 Write-Host ("  SOUL.md      sha256 {0}  {1}" -f (Sha256 $soulPath), $soulPath)
 Write-Host ("  servers.json sha256 {0}  {1}" -f (Sha256 $srvPath), $srvPath)
+Write-Host ("  claude_mcp_servers.json        {0}  (merge into Claude Desktop / Cowork MCP settings)" -f $claudePath)
 Write-Host ""
 Write-Host "Next: powershell -ExecutionPolicy Bypass -File scripts\preflight.ps1 -McpTest"
 exit 0
