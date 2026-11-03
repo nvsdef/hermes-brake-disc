@@ -69,8 +69,26 @@ if busy:
 cad = json.loads(CAD.read_text())
 REF = {}
 for b in cad["bodies"]:
-    bb = b["bbox_mm"]
-    REF[b["name"]] = {"v": b["volume_m3"] * 1e9, "bb": np.array([bb["x"][0], bb["y"][0], bb["z"][0], bb["x"][1], bb["y"][1], bb["z"][1]])}
+    bb = b["bbox_mm"]; c = [float(v) for v in b["centroid_mm"]]
+    full = all(k in bb for k in ("x", "y", "z"))
+    REF[b["name"]] = {"v": b["volume_m3"] * 1e9, "full": full, "z": np.array(bb["z"], float),
+                      "ang": float(np.degrees(np.arctan2(c[1], c[0]))) if np.hypot(c[0], c[1]) > 1.0 else None,
+                      "bb": np.array([bb["x"][0], bb["y"][0], bb["z"][0], bb["x"][1], bb["y"][1], bb["z"][1]]) if full else None}
+
+
+def score(v, box, r):
+    """Distance in units of tolerance: volume 1 %, bbox 0.05 mm. Rows that carry only a z band
+    (Gate 1 gives full x/y boxes for vane_01 only) match on volume, z band and the polar angle of
+    the bbox centre against the measured centroid angle (6 deg; vanes are 18 deg apart)."""
+    dv = abs(v - r["v"]) / r["v"] * 100 / 1.0
+    if r["full"]:
+        return max(dv, float(np.abs(box - r["bb"]).max()) / 0.05)
+    dz = float(max(abs(box[2] - r["z"][0]), abs(box[5] - r["z"][1]))) / 0.05
+    if r["ang"] is None:
+        return max(dv, dz)
+    cx, cy = 0.5 * (box[0] + box[3]), 0.5 * (box[1] + box[4])
+    da = abs((np.degrees(np.arctan2(cy, cx)) - r["ang"] + 180) % 360 - 180) / 6.0
+    return max(dv, dz, da)
 
 from ansys.geometry.core import launch_modeler_with_spaceclaim
 from ansys.geometry.core.designer import SurfaceType
@@ -105,7 +123,7 @@ try:
     # ---- 2. identify by volume + bbox (score in units of tolerance) ---------------------
     names = {}; rows = []
     for b, v, box in sig:
-        sc = sorted((max(abs(v - r["v"]) / r["v"] * 100 / 1.0, float(np.abs(box - r["bb"]).max()) / 0.05), n) for n, r in REF.items())
+        sc = sorted((score(v, box, r), n) for n, r in REF.items())
         names.setdefault(sc[0][1], []).append(b)
         rows.append({"name": sc[0][1], "score": round(sc[0][0], 4), "runner_up": sc[1][1], "runner_up_score": round(sc[1][0], 2),
                      "volume_mm3": round(v, 3), "bbox_mm": [round(x, 3) for x in box]})
@@ -134,7 +152,7 @@ try:
     named = {}
     for b in bodies:
         box = bb(b); v = b.volume.m_as("mm**3")
-        n = min(R27, key=lambda k: max(abs(v - R27[k]["v"]) / R27[k]["v"] * 100, float(np.abs(box - R27[k]["bb"]).max()) / 0.05))
+        n = min(R27, key=lambda k: score(v, box, R27[k]))
         named.setdefault(n, []).append(b)
     if len(named) != 27 or any(len(v) != 1 for v in named.values()):
         raise SystemExit("re-identification after delete is not a permutation")

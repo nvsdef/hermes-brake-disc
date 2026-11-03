@@ -182,7 +182,7 @@ Gate 3.
 | applied energy vs closed form | 2 % |
 | stored / applied | 90 to 110 % |
 | stored energy, rotor max T, pad max T | rise in every `history` window |
-| `history[-1].t_s` | `settings.end_time_s` (1.0 s by default) |
+| `history[-1].t_s` | 3.540681 s (the full stop, default) |
 | `live_contour.displayed` | `true` (Fluent is left open on purpose) |
 | `timing.seconds`, `phase_seconds` | copied into `BUILD_STATE.timing.G3` |
 

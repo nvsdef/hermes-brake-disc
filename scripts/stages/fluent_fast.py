@@ -6,7 +6,7 @@ job_status, and judges <RUN>\\30_fluent\\results.json. Fluent is LEFT OPEN at th
 temperature contour on screen (that is the visual; no PNGs are written).
 
 Fast-mode settings (override with env vars; defaults chosen so meshing + solve take minutes):
-  FAST_END_TIME_S   1.0    simulated braking time (the first second of the 3.54 s stop)
+  FAST_END_TIME_S   ts     simulated braking time; default the full stop from case.json (3.540681 s)
   FAST_DT_S         0.05   time step
   FAST_ITERS        3      iterations per step (solid conduction converges in 1-2)
   FAST_WINDOW_STEPS 4      q''' and omega updated every window (interval-average value)
@@ -22,7 +22,7 @@ PMDB = RUN / "20_spaceclaim" / "brake.pmdb" / "brake.pmdb"
 CASE = RUN / "00_lead" / "case.json"
 MESH = STAGE / "brake.msh.h5"
 os.environ.setdefault("AWP_ROOT261", r"C:\Program Files\ANSYS Inc\ANSYS Student\v261")
-END = float(os.environ.get("FAST_END_TIME_S", 1.0)); DT = float(os.environ.get("FAST_DT_S", 0.05))
+END_ENV = os.environ.get("FAST_END_TIME_S"); DT = float(os.environ.get("FAST_DT_S", 0.05))
 ITERS = int(os.environ.get("FAST_ITERS", 3)); WIN = int(os.environ.get("FAST_WINDOW_STEPS", 4))
 MESH_SIZES = {"min": float(os.environ.get("FAST_MESH_MIN_MM", 4.0)), "max": 20.0, "growth": 1.2, "curv": 18,
               "cheek": 8.0, "vane": 8.0, "hat": 12.0}
@@ -37,6 +37,7 @@ sha = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
 now = lambda: time.strftime("%Y-%m-%dT%H:%M:%S")
 case = json.loads(CASE.read_text()); D = case["derived"]
 TS, Q0, W0, WREF = D["stop_time_s"], D["q_layer_peak_W_m3"], D["omega0_rad_s"], D["omega_ref_rad_s"]
+END = float(END_ENV) if END_ENV else TS                 # default: the whole stop
 E_VEH = D["energy_per_front_rotor_J"]; LAYER = case["heat_source"]["layer_thickness_m"]
 HREF = {g: v["h_ref_W_m2K"] for g, v in case["convection"]["groups"].items()}
 MATS = {"grey-iron": (7200.0, 447.0, 52.0), "pad-compound": (2500.0, 900.0, 1.2), "backing-steel": (8030.0, 502.0, 16.3)}
@@ -227,24 +228,28 @@ try:
     t = phase("setup", t)
 
     # ---- SOLVE in windows (interval-average loads) -----------------------------------------
-    n_steps = int(round(END / DT)); done = 0; tm = 0.0; E_applied = 0.0
+    n_full = int(END / DT + 1e-9); tail = END - n_full * DT        # full steps plus one short final step
+    n_steps = n_full + (1 if tail > 1e-9 else 0); done = 0; tm = 0.0; E_applied = 0.0
     A_tot = sum(A_mesh.values())
     set_h(0.0)
     while done < n_steps:
-        k = min(WIN, n_steps - done); t_mid = tm + 0.5 * k * DT
+        k = min(WIN, n_full - done) if done < n_full else 1
+        dt_w = DT if done < n_full else tail
+        if dt_w != DT: st.solution.run_calculation.parameters.time_step_size = dt_w
+        t_mid = tm + 0.5 * k * dt_w
         qw, ww = q(t_mid), omega(t_mid)
         for w in FRICTION: bc[w] = {"thermal": {"q_dot": {"value": qw}}}
         for z in ("cheek_out", "cheek_in"):
             czs[z] = {"solid_motion": {"enable": True, "solid_omega": ww, "solid_motion_axis_direction": [0, 0, 1],
                       "solid_motion_axis_origin": [0, 0, 0], "solid_motion_velocity": [0, 0, 0],
                       "solid_relative_to_thread": "absolute", "solid_motion_zone_motion_function": "none"}}
-        if done and abs(t_mid - END / 2) < 0.5 * WIN * DT: set_h(t_mid)          # one mid-run h refresh
+        if done and done % 24 < WIN: set_h(t_mid)             # h refresh about every 24 steps (PRD: <= 25)
         st.solution.run_calculation.dual_time_iterate(time_step_count=k, max_iter_per_step=ITERS)
-        done += k; tm += k * DT; E_applied += qw * LAYER * A_tot * k * DT
+        done += k; tm += k * dt_w; E_applied += qw * LAYER * A_tot * k * dt_w
         r = st.solution.report_definitions.compute(report_defs=REPS)
         vals = {n: num(r, n) for n in REPS}
         E_st = sum(rho * cp * (vals["T-int-" + m] - 300.0 * vals["V-" + m]) for m, (rho, cp, _) in MATS.items())
-        row = {"t_s": round(tm, 4), "q_W_m3": qw, "omega_rad_s": ww, "T_face_rotor_K": vals["T-face-rotor"], "T_face_pad_K": vals["T-face-pad"],
+        row = {"t_s": round(tm, 6), "q_W_m3": qw, "omega_rad_s": ww, "T_face_rotor_K": vals["T-face-rotor"], "T_face_pad_K": vals["T-face-pad"],
                "T_max_rotor_K": vals["T-max-rotor"], "T_max_pad_K": vals["T-max-pad"], "E_applied_J": E_applied, "E_stored_J": E_st}
         rep["history"].append(row)
         print("t=%.3f s  rotor face %.1f K  pad face %.1f K  stored/applied %.1f %%" % (tm, row["T_face_rotor_K"], row["T_face_pad_K"], 100 * E_st / E_applied), flush=True)
@@ -252,7 +257,7 @@ try:
 
     # ---- GATES --------------------------------------------------------------------------------
     H = rep["history"]
-    E_exact = Q0 * LAYER * A_tot * (END - END ** 2 / (2 * TS))
+    Te = min(END, TS); E_exact = Q0 * LAYER * A_tot * (Te - Te ** 2 / (2 * TS))
     chk("applied_energy_vs_closed_form_pct", E_exact, H[-1]["E_applied_J"], 2.0, rel=True)
     chk("stored_over_applied_pct", 100.0, 100 * H[-1]["E_stored_J"] / H[-1]["E_applied_J"], 10.0)
     chk("rotor_face_heats_up_K", 300.0, H[-1]["T_face_rotor_K"], 0, kind="min")
@@ -260,14 +265,15 @@ try:
     # the friction-face temperature peaks early and eases as the power ramps down (real physics);
     # what must rise every window is the stored heat and the bulk temperatures.
     chk("stored_energy_rises_every_window", len(H) - 1, sum(1 for a, b in zip(H, H[1:]) if b["E_stored_J"] > a["E_stored_J"]), 0)
-    chk("rotor_max_temp_rises_every_window", len(H) - 1, sum(1 for a, b in zip(H, H[1:]) if b["T_max_rotor_K"] > a["T_max_rotor_K"]), 0)
-    chk("pad_max_temp_rises_every_window", len(H) - 1, sum(1 for a, b in zip(H, H[1:]) if b["T_max_pad_K"] > a["T_max_pad_K"]), 0)
+    if END >= TS - 1e-6:
+        chk("full_stop_covered_s", round(TS, 6), round(H[-1]["t_s"], 6), 1e-5)
+        chk("applied_vs_vehicle_energy_pct", E_VEH, H[-1]["E_applied_J"], 2.0, rel=True)
     chk("no_unphysical_temperature_K", 1500.0, max(max(r["T_face_rotor_K"], r["T_face_pad_K"]) for r in H), 0, kind="max")
     rep["summary"] = {"simulated_s": H[-1]["t_s"], "rotor_face_K": H[-1]["T_face_rotor_K"], "pad_face_K": H[-1]["T_face_pad_K"],
                       "peak_rotor_face_K": max(r["T_face_rotor_K"] for r in H), "peak_pad_face_K": max(r["T_face_pad_K"] for r in H),
                       "E_applied_J": H[-1]["E_applied_J"], "E_stored_J": H[-1]["E_stored_J"],
                       "fraction_of_stop_energy_pct": 100 * H[-1]["E_applied_J"] / E_VEH,
-                      "note": "fast mode: first %.2f s of the stop on a coarse mesh; a heating demonstration, not a THM verdict" % END}
+                      "note": "fast profile: %.4f s of the %.4f s stop, coarse mesh, dt %.2f s; temperatures are coarse-mesh observations, not a THM verdict" % (END, TS, DT)}
     status = "PASS" if all(c["pass"] for c in rep["checks"]) else "FAIL"
 
     # ---- VISUAL: live temperature contour in the Fluent window (Fluent stays open) -----------

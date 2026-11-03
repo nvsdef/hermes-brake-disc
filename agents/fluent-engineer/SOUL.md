@@ -21,7 +21,7 @@ sections 4 to 6A, `specs/handoffs.md` Gate 3, and my skill `fl-fast-run`
 The method is frozen in a vetted stage script, `scripts/stages/fluent_fast.py`:
 coarse poly-hexcore mesh with shared topology, the mesh gate, the PRD materials,
 the one-sided grey-iron friction layer, solid motion on the two cheeks only, the
-three convection groups, then the first 1.0 s of the stop in 0.05 s steps with
+three convection groups, then the whole 3.54 s stop in 0.05 s steps with
 interval-averaged loads. It was proved on 2026-11-02 in 126 s with a stored /
 applied energy ratio of 99.6 %.
 
@@ -36,7 +36,7 @@ applied energy ratio of 99.6 %.
    every check as expected / measured / PASS|FAIL, then the summary: peak and
    final friction-face temperatures, applied and stored energy.
 4. **I state what the result is.** The fast profile is a heating demonstration
-   on a coarse mesh over the first second of the stop. It is not a verdict on
+   on a coarse mesh with a 0.05 s step. It is not a verdict on
    THM-01 to THM-04, and I never present it as one.
 
 ## What I never do
@@ -59,8 +59,8 @@ applied energy ratio of 99.6 %.
 27 solid / 0 fluid zones with PRD names; 45 coupled pairs; friction contact
 areas 5 864.31 mm^2 each within 2 %; meshed volume 2 030 484.53 mm^3 within 2 %;
 27 zone materials and the grey-iron layer read back; applied energy within 2 %
-of the closed-form integral; stored / applied 90 to 110 %; stored energy and
-bulk rotor and pad maxima rising in every window; friction faces above 300 K and
+of the closed-form integral; stored / applied 90 to 110 %; stored energy rising in every window; the full stop covered and
+applied energy within 2 % of 243 055.6 J; friction faces above 300 K and
 below 1500 K. The face temperature peaking early (about 0.2 s) and easing as
 the power ramps down is expected physics.
 

@@ -13,24 +13,24 @@ metadata:
 # fl-fast-run - mesh and heat-up solve in one job (PRD H1.2, fast run profile)
 
 Gate 3 meshes the PMDB, sets up the transient conduction case from `case.json`,
-and solves the first second of the stop, enough to show the rotor and pads
+and solves the whole stop on a coarse mesh, enough to show the rotor and pads
 heating up with a closed energy balance. The work is done by a vetted stage
 script, `scripts/stages/fluent_fast.py`, built from the calls that worked on run
 FR330V-20261102-0936. You check the preconditions, launch it once, judge
 `results.json` and route a failure. You do not rewrite the script during a run.
 
-Measured on 2026-11-02: about **126 s** in total (launch 32, mesh 34, mesh gate
-15, setup 26, solve 14, contour 3).
+Measured on 2026-11-02 for the first second: about **126 s** (launch 32, mesh
+34, mesh gate 15, setup 26, solve 14, contour 3). The full stop adds about 35 s.
 
 ## Fast run profile (PRD section 6A)
 
 | Setting | Fast value | PRD full value |
 |---|---|---|
 | Mesh | global 4 to 20 mm, growth 1.2, curvature 18 deg; cheeks 8, vanes 8, hat 12 mm | 2.2 to 20 mm; 4 / 5 / 8 mm |
-| Simulated time | 0 to 1.0 s (the peak-heating part of the stop) | 0 to 3.540681 s |
-| Time step | 0.05 s, 20 steps | 0.01 s, 355 steps |
+| Simulated time | 0 to 3.540681 s, the full stop (70 x 0.05 s + one short step) | 0 to 3.540681 s |
+| Time step | 0.05 s, 71 steps | 0.01 s, 355 steps |
 | Iterations per step | 3 | 5 |
-| Load windows | q''' and omega every 4 steps (interval average), h at t = 0 and mid-run | every 10 / 25 steps |
+| Load windows | q''' and omega every 4 steps (interval average), h every 24 steps | every 10 / 25 steps |
 | Outputs | `results.json`, mesh, case and data; a live contour in the Fluent window | plus images, histories, report |
 
 Loads, materials, the one-sided grey-iron wall layer, rotation of the two cheeks
@@ -51,7 +51,8 @@ Override a setting only when the lead's commission says so, with the env vars
 | meshed volume of 27 zones | 2 030 484.53 mm^3 within 2 % |
 | applied energy vs closed form q''' x d x A_mesh integral | within 2 % |
 | stored / applied energy (convection is about 1 % over 1 s) | 90 to 110 % |
-| stored energy, rotor max T and pad max T | rise in every window |
+| stored energy | rises in every window |
+| full stop covered; applied vs vehicle energy E | t = 3.540681 s; within 2 % of 243 055.6 J |
 | friction-face temperatures | above 300 K, below 1500 K |
 
 The friction-face temperature peaks early (about 0.2 s) and then eases as the
@@ -80,7 +81,7 @@ started.
    pyfluent event-stream thread and is harmless; judge only `results.json`.
 4. **Judge** `<RUN>\30_fluent\results.json` yourself: `status` is `PASS`, every
    `checks[]` row passes, `history` has one row per window ending at
-   `settings.end_time_s`, and `live_contour.displayed` is true.
+   3.540681 s, and `live_contour.displayed` is true.
 5. **Report** to the lead with the handback JSON: every check as expected /
    measured / PASS|FAIL, the `summary` block (peak and final friction-face
    temperatures, applied and stored energy), `timing.seconds` and

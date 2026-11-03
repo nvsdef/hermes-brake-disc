@@ -76,7 +76,7 @@ differs, **the PRD wins**. Stage contracts are in `specs/handoffs.md`.
 
 ## 6. Scope
 Fast run profile (PRD section 6A): one CAD build, SpaceClaim prep, a coarse mesh
-and the first second of the stop, enough to show the model heating up with a
+and the whole stop with a 0.05 s step, enough to show the model heating up with a
 closed energy balance. The THM requirements are **not adjudicated** in this
 profile. GEO-05 (cross-drilling) and THM-06 (calliper/fluid) are deferred. 2D
 drawings, images and the PDF report are **descoped**. Fictional teaching case.

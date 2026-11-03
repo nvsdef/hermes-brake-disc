@@ -157,8 +157,9 @@ record your own `commissioned_at`, `notice_at` and review minutes.
 
 ## 7. Engineering judgement for the summary
 
-- **The fast profile does not adjudicate THM-01 to THM-04.** It solves the first
-  1.0 s on a coarse mesh to show the heating and close the energy balance. Quote
+- **The fast profile does not adjudicate THM-01 to THM-04.** It solves the whole
+  stop on a coarse mesh with a 0.05 s step to show the heating and close the
+  energy balance. Quote
   the friction-face temperatures as observations, never as PASS or FAIL against
   a limit. The rules below apply when a full-profile run (PRD section 6) is
   commissioned.

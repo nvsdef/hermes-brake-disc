@@ -89,7 +89,8 @@ Fluent alone needed about 25 min at the section 6 numerics. The user asked for
 an end-to-end run of about 10 minutes, no report, no images.
 
 37. **Fast run profile is the default** (PRD section 6A): coarse mesh (4 to 20 mm;
-    cheeks 8, vanes 8, hat 12 mm), first 1.0 s of the stop, dt 0.05 s, 3
+    cheeks 8, vanes 8, hat 12 mm), the full stop at dt 0.05 s (first proved on
+    0 to 1.0 s, extended to the full stop the same day), 3
     iterations per step. THM-01 to THM-04 are `NOT RUN (fast profile)`. Section 6
     stays the full analysis definition.
 38. **Vetted stage scripts for Gates 2 and 3** (`scripts/stages/`), built from
@@ -114,3 +115,13 @@ an end-to-end run of about 10 minutes, no report, no images.
     comes at about 0.2 s and eases as the power ramps down; the gate requires
     stored energy and the bulk rotor and pad maxima to rise in every window,
     and stored / applied within 90 to 110 % (measured 99.6 %).
+44. **Run 3 caught a Gate 1 / Gate 2 contract gap.** `cad_report.json` carries
+    full x/y/z boxes only for vane_01 (PRD section 4 gives no expected box for
+    vanes 2 to 20); `spaceclaim_prep.py` assumed full boxes and raised `KeyError`.
+    The script now matches z-only rows on volume, z band and the polar angle of
+    the box centre against the measured centroid angle (6 deg; vanes are 18 deg
+    apart). Checked offline on run 2's SpaceClaim boxes: 28/28 unique, worst
+    score 0.44, nearest runner-up 2.56.
+45. **No palette tricks.** The contour uses the true min-to-max range of the
+    displayed surfaces. The user's request to make a partial solve look fully
+    solved was answered by solving the full stop instead (about 50 s more).

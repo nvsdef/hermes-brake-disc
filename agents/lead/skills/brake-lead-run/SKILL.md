@@ -94,7 +94,7 @@ one check script and one message.
 - [ ] Announce; delegate; end turn.
 - [ ] Read `30_fluent\results.json`: `status` PASS, every `checks[]` row
       passes (zones 27/0, 45 coupled pairs, areas, volume, materials, energy,
-      heating), `inputs_sha256` equals the frozen PMDB and case hashes,
+      heating, full stop covered), `inputs_sha256` equals the frozen PMDB and case hashes,
       `history` ends at `settings.end_time_s`.
 - [ ] Note that Fluent is open with the contour (that is intended).
 

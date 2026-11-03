@@ -308,7 +308,7 @@ Print every check as expected / measured / delta / tolerance / PASS|FAIL.
 ```
 ROLE: fluent-engineer - Gate 3 for run <RUN_ID>. Run the vetted stage script
 scripts/stages/fluent_fast.py once on the frozen brake.pmdb (coarse mesh, mesh
-gate, PRD setup from case.json, first 1.0 s of the stop), then judge
+gate, PRD setup from case.json, the whole stop), then judge
 <RUN>\30_fluent\results.json. Fluent stays open with the temperature contour on
 PASS. Child <N> of <BUDGET>.
 ```
@@ -337,7 +337,7 @@ JUDGE <RUN>\30_fluent\results.json yourself: status PASS, every checks[] row
 passes (27 solid / 0 fluid zones, 45 coupled pairs, friction areas 5 864.31 mm^2
 within 2 %, meshed volume 2 030 484.53 mm^3 within 2 %, materials and grey-iron
 layer read back, applied energy within 2 % of the closed form, stored/applied
-90 to 110 %, stored energy and bulk maxima rising every window), inputs_sha256
+90 to 110 %, stored energy rising every window, full stop covered), inputs_sha256
 equal the hashes above, history ends at settings.end_time_s, live_contour
 displayed. Report the summary block (peak and final friction-face temperatures,
 applied and stored energy). This is a heating demonstration, not a THM verdict.

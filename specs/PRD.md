@@ -300,16 +300,16 @@ gates) is unchanged.
 | Item | Fast profile | Section 6 full value |
 |---|---|---|
 | Mesh sizes | global 4 to 20 mm, growth 1.2, curvature 18 deg; local cheeks 8, vanes 8, hat 12 mm | 2.2 to 20 mm; 4 / 5 / 8 mm |
-| Simulated time | 0 to 1.0 s (the peak-heating part of the stop) | 0 to 3.540681 s |
+| Simulated time | 0 to 3.540681 s, the full stop (70 steps of 0.05 s plus one short final step) | 0 to 3.540681 s |
 | Time step / iterations | 0.05 s, 3 iterations per step | 0.01 s, 5 iterations per step |
-| Load updates | q''' and omega every 4 steps (interval average); h at t = 0 and mid-run | every 10 / 25 steps |
-| Energy gate | applied within 2 % of the closed-form integral of q''' x d x A_mesh over the simulated time; stored / applied 90 to 110 % | applied within 2 % of E; ratio 90 to 110 % |
-| Heating gate | stored energy, rotor max T and pad max T rise in every window; friction faces above 300 K and below 1500 K | - |
+| Load updates | q''' and omega every 4 steps (interval average); h every 24 steps | every 10 / 25 steps |
+| Energy gate | applied within 2 % of the closed-form integral and of E; stored / applied 90 to 110 %; the full ts covered | applied within 2 % of E; ratio 90 to 110 % |
+| Heating gate | stored energy rises in every window; friction faces above 300 K and below 1500 K | - |
 | Outputs | `results.json`, mesh, case and data; Fluent left open with a temperature contour | plus histories, images, report |
 
 **What the fast profile does not do.** It does not adjudicate THM-01 to THM-04:
-the mesh is too coarse at the friction faces and only the first second of the
-stop is solved. In the fast profile those rows are `NOT RUN (fast profile)`.
+the mesh and the 0.05 s step are too coarse at the friction faces to resolve
+the surface peak, so the temperatures are observations, not a verdict. In the fast profile those rows are `NOT RUN (fast profile)`.
 Images, the 2D drawing and the PDF report are descoped.
 
 The vetted stage scripts `scripts/stages/spaceclaim_prep.py` and

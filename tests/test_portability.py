@@ -203,8 +203,9 @@ class StageScriptTests(unittest.TestCase):
         prd = (ROOT / 'specs' / 'PRD.md').read_text(encoding='utf-8')
         self.assertIn('## 6A. Fast run profile', prd)
         fl = (ROOT / 'scripts' / 'stages' / 'fluent_fast.py').read_text(encoding='utf-8')
-        for frag in ('"FAST_END_TIME_S", 1.0', '"FAST_DT_S", 0.05', '"FAST_ITERS", 3', '"FAST_WINDOW_STEPS", 4',
+        self.assertIn('END = float(END_ENV) if END_ENV else TS', fl)
+        for frag in ('"FAST_DT_S", 0.05', '"FAST_ITERS", 3', '"FAST_WINDOW_STEPS", 4',
                      '"FAST_MESH_MIN_MM", 4.0', '"cheek": 8.0', '"vane": 8.0', '"hat": 12.0'):
             self.assertIn(frag, fl)
-        for frag in ('0 to 1.0 s', '0.05 s, 3 iterations per step', 'cheeks 8, vanes 8, hat 12 mm'):
+        for frag in ('0 to 3.540681 s, the full stop', '0.05 s, 3 iterations per step', 'cheeks 8, vanes 8, hat 12 mm'):
             self.assertIn(frag, prd)
