@@ -25,8 +25,8 @@ profile).
   `profile/`, and `scripts/preflight.ps1` checks a machine against the pinned
   environment. On 2026-11-02 it passed 29/29 checks against a freshly rendered
   profile, with live MCP connections.
-- **Fast profile run end to end on 2026-11-02** (run 3, Claude agents): all gates
-  PASS in 20.5 min including two repairs; about 13 to 14 min on a clean pass.
+- **Fast profile run end to end on 2026-11-02** (run 4, Claude agents): all gates
+  PASS first time in **12.3 min** (CAD 5.4, SpaceClaim 1.4, Fluent 3.7).
   Not yet run under Hermes.
 
 ## Layout

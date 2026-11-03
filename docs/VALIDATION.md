@@ -1,5 +1,23 @@
 # Validation status
 
+## Run 4, fast profile with flipped twins (2026-11-02, FR330V-20261102-2227) - complete_with_findings
+
+Package commit a82b8ca. Same harness as run 3 (Claude lead, one Claude
+specialist per application). **12.3 min end to end** (22:27:08 to 22:39:27), every
+gate PASS on the first attempt, no repairs.
+
+| Gate | Result | Time |
+|---|---|---|
+| 0 duty cycle | PASS (3 values within 0.00003 %) | < 1 min |
+| 1 CAD, 6 parts + 3 flipped instances | PASS: 28/28 bodies, 9 components (6 identity, 3 flip), STEP 25 / 7 / 9 | 5.4 min, 104 calls (run 3: 6.5 min, 130 calls) |
+| 2 SpaceClaim prep | PASS 15/15; 28 bodies imported, areas 0.00 % | 62 s app, 85 s with agent |
+| 3 Fluent, full stop | PASS 18/18; stored/applied 98.84 %, applied 100.09 % of E | 192 s app, 221 s with agent |
+| 4 gate summary | lead | < 1 min |
+
+Friction-face peaks (coarse mesh, dt 0.05 s): 729 K rotor, 930 K pad; end of stop
+384 K / 388 K. Fluent left open with the contour.
+
+
 ## Run 3, fast run profile (2026-11-02, FR330V-20261102-2152) - complete_with_findings
 
 End-to-end with agents: Claude lead plus one Claude specialist per application,

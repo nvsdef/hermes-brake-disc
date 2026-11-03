@@ -24,8 +24,8 @@ the report. The lead re-checks `step.manifold_solid_count` itself.
 | Check | Expected |
 |---|---|
 | `component_count` | 9 |
-| names | `cheek_out-1`, `cheek_in-1`, `vanes-1`, `hat-1`, `outerpad-1`, `innerpad-1`, `bp_outer-1`, `bp_inner-1`, `calliper-1` (instance numbers may differ) |
-| each transform | exactly `[1,0,0, 0,1,0, 0,0,1, 0,0,0, 1]` |
+| names | `cheek_out-1`, `cheek_out-2` (cheek_in), `vanes-1`, `hat-1`, `outerpad-1`, `outerpad-2` (innerpad), `bp_outer-1`, `bp_outer-2` (bp_inner), `calliper-1` (instance numbers may differ) |
+| each transform | identity `[1,0,0, 0,1,0, 0,0,1, 0,0,0, 1]` for six; exactly `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]` for cheek_in, innerpad, bp_inner |
 | each `fixed` | true |
 | source paths | all in `C:\brake-runs\<run-id>\10_cad\` |
 
@@ -182,7 +182,7 @@ launch SolidWorks, and 0 if it attached to a running session.
 Return to the lead, in this order:
 
 1. Status. If halted, give the two numbers that stopped you first.
-2. `assembly.component_count` (9) and the STEP counts (28 / 10).
+2. `assembly.component_count` (9) and the STEP counts (25 solids / 7 PRODUCT / 9 occurrences).
 3. A 28-row table: name, volume expected / measured / delta %, centroid delta
    mm, bbox PASS or FAIL.
 4. Clearances and interference, with the method.

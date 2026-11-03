@@ -33,7 +33,8 @@ When a commission asks you to build, rebuild or check `cheek_out`, `cheek_in`,
   solver rotates.
 - No cross-drilled holes (GEO-05 is DEFERRED), no fillets, and no second rotor
   model.
-- Build `cheek_in` from scratch. Do not copy `cheek_out`.
+- `cheek_in` is a flipped instance of `cheek_out` (assembly step A2). Never copy
+  the file and edit its offset.
 - Vanes come from the extended-strip cards and are trimmed by a cut. Never fit
   a curve to r = 95 or r = 165, and never use `create_pattern`.
 - HALT: two repairs per failing check, then stop and return both numbers.
