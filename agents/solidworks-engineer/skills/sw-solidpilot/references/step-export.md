@@ -48,8 +48,9 @@ and `Get-FileHash <p> -Algorithm SHA256`.
 
 | Check | Pattern | Expected |
 |---|---|---|
-| Solid bodies | `MANIFOLD_SOLID_BREP` | **28** |
-| Products | regex `= ?PRODUCT ?\(` | **10** (9 parts + the assembly) |
+| Solid bodies | `MANIFOLD_SOLID_BREP` | **25** (one per unique body; the 3 flipped instances share theirs) |
+| Products | regex `= ?PRODUCT ?\(` | **7** (6 part files + the assembly) |
+| Occurrences | `NEXT_ASSEMBLY_USAGE_OCCURRENCE` | **9** (SpaceClaim expands these to 28 bodies) |
 | Schema | the `FILE_SCHEMA` line | record as read; the predecessor got `CONFIG_CONTROL_DESIGN` (AP203) |
 | Units | `CONVERSION_BASED_UNIT` or `SI_UNIT` lines | record as read |
 | Hash | SHA-256 of the file | goes in `step.sha256` |
@@ -66,14 +67,15 @@ The predecessor's STEP was written in an inch unit context
 (`CONVERSION_BASED_UNIT('INCH')`) and imported at true scale. Do not try to fix
 it. Scale is proven at Gate 2: SpaceClaim measures the rotor OD and z extents.
 
-If the `MANIFOLD_SOLID_BREP` count is not 28:
+If the `MANIFOLD_SOLID_BREP` count is not 25 (or occurrences not 9):
 
 | Count | Likely cause |
 |---|---|
-| 9 | `vanes` exported as one body: the vanes fused or were patterned |
-| 27 | the calliper, or one vane, is missing |
-| 8 PRODUCT parts | two parts were merged into one file |
-| more than 28 | a part carries an extra body (a failed cut left a fragment) |
+| 6 | `vanes` exported as one body: the vanes fused or were patterned |
+| 24 | the calliper, or one vane, is missing |
+| 28 solids, 10 PRODUCT | the inboard parts were built as separate files (allowed only in the old flow) |
+| occurrences below 9 | a component (often a flipped instance) was not inserted |
+| more than 25 | a part carries an extra body (a failed cut left a fragment) |
 
 Each of these is a CAD defect: find the part, repair it, re-export. Two repairs,
 then HALT.
@@ -94,8 +96,9 @@ Gate 2 import, which re-measures all 28 bodies against `cad_report.json`.
 "step": {
   "path": "C:\\brake-runs\\<run-id>\\10_cad\\brake.step",
   "sha256": "<hex>",
-  "manifold_solid_count": 28,
-  "product_count": 10,
+  "manifold_solid_count": 25,
+  "occurrence_count": 9,
+  "product_count": 7,
   "ap_schema": "<FILE_SCHEMA as read>",
   "unit_context": "<as read>"
 }

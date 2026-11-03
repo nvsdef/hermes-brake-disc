@@ -136,4 +136,4 @@ minimum goes to the origin" on all axes, and do not use STL for placement.
 `create_pattern(pattern_type='mirror', features_json='["Cut-Extrude1"]',
 plane='Front Plane')` is a valid way to mirror features inside one part. This
 brake does not use it: the calliper is asymmetric in z (slot face at +38.6 but
--39), and every twin must be its own part file.
+-39); the inboard twins are flipped instances (`tool-traps.md`), never mirror features.

@@ -123,7 +123,9 @@ both measured numbers to the lead. Never change a PRD number.
 **10. STEP export and counting.** Details are in `references/step-export.md`.
 - Export only after `analyze_assembly` shows 9 components.
 - Count `MANIFOLD_SOLID_BREP` in the file, then count PRODUCT with the regex
-  `= ?PRODUCT ?\(`. Expect 28 and 10. The export status is not a count.
+  `= ?PRODUCT ?\(`, and `NEXT_ASSEMBLY_USAGE_OCCURRENCE`. Expect 25, 7 and 9
+  (three bodies are flipped instances that share a solid). The export status
+  is not a count.
 
 **11. Python and the terminal.** Never type bare `python` or `python3`, because
 it opens a Windows Store installer on this machine (run 1 lost time here). For
@@ -169,5 +171,6 @@ This skill was followed if all of these are true:
 - Each part has exactly one `analyze_model` measurement (`bodies` for the
   vanes), with printed expected / measured / delta / PASS lines.
 - Every timeout was followed by an inspection before any retry.
-- The STEP was counted in the file: 28 `MANIFOLD_SOLID_BREP` and 10 PRODUCT.
+- The STEP was counted in the file: 25 `MANIFOLD_SOLID_BREP`, 7 PRODUCT, 9
+  `NEXT_ASSEMBLY_USAGE_OCCURRENCE`.
 - No bare `python` was typed in the terminal.

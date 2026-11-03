@@ -209,3 +209,34 @@ class StageScriptTests(unittest.TestCase):
             self.assertIn(frag, fl)
         for frag in ('0 to 3.540681 s, the full stop', '0.05 s, 3 iterations per step', 'cheeks 8, vanes 8, hat 12 mm'):
             self.assertIn(frag, prd)
+
+
+class FlippedTwinContractTests(unittest.TestCase):
+    """Decision 46: the inboard twins are flipped instances, consistently everywhere."""
+    FLIP = '[1,0,0,0,-1,0,0,0,-1,0,0,0,1]'
+
+    def test_flip_transform_and_counts_are_consistent(self):
+        files = {
+            'PRD': ROOT / 'specs/PRD.md',
+            'pads': ROOT / 'agents/solidworks-engineer/skills/sw-pads-calliper/SKILL.md',
+            'B1': ROOT / 'agents/lead/skills/brake-lead-run/references/commission-templates.md',
+            'gate': ROOT / 'agents/lead/skills/brake-lead-run/references/gate-checklists.md',
+        }
+        for k, p in files.items():
+            t = p.read_text(encoding='utf-8')
+            self.assertIn(self.FLIP, t, k)
+            self.assertNotRegex(t, r'MANIFOLD_SOLID_BREP[^\n]{0,40}\b28\b', k)
+        prd = files['PRD'].read_text(encoding='utf-8')
+        self.assertIn('**25** `MANIFOLD_SOLID_BREP`', prd)
+        self.assertIn('**9** `NEXT_ASSEMBLY_USAGE_OCCURRENCE`', prd)
+
+    def test_inboard_parts_are_not_built(self):
+        rotor = (ROOT / 'agents/solidworks-engineer/skills/sw-rotor-build/SKILL.md').read_text(encoding='utf-8')
+        self.assertIn('## Part 2: `cheek_in` - 0 calls (not built)', rotor)
+        pads = (ROOT / 'agents/solidworks-engineer/skills/sw-pads-calliper/SKILL.md').read_text(encoding='utf-8')
+        self.assertNotIn("| `innerpad` | -0.022 |", pads)
+        self.assertNotIn("| `bp_inner` | -0.031 |", pads)
+
+    def test_spaceclaim_script_never_renames_bodies(self):
+        sc = (ROOT / 'scripts/stages/spaceclaim_prep.py').read_text(encoding='utf-8')
+        self.assertNotRegex(sc, r'^\s*b\.name\s*=', 'instances share a master body')

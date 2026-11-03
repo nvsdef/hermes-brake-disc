@@ -25,20 +25,24 @@ assembly, export and report**.
 
 ## When to use
 
-When building or checking `outerpad`, `innerpad`, `bp_outer`, `bp_inner` or
-`calliper`, when assembling, and when writing Gate 1.
+When building or checking `outerpad`, `bp_outer` or `calliper`, when
+assembling (including the flipped `innerpad` and `bp_inner` instances), and when
+writing Gate 1.
 
-## Parts 5 to 8: pads and plates - 7 calls each
+## Parts 5 and 7: `outerpad` and `bp_outer` - 7 calls each
 
-Build each one independently in a new part. Never copy `outerpad` to make
-`innerpad`: a copied plane offset was measured to keep its old sign.
+Build only the two outboard parts. `innerpad` and `bp_inner` are not part files:
+they are second instances of `outerpad.SLDPRT` and `bp_outer.SLDPRT`, rotated
+180 deg about +X in the assembly (A2). Never copy a file and edit its plane
+offset: a copied offset was measured to keep its old sign.
 
 | Part | Plane offset | Card | Depth (mid-plane) | Volume m^3 | Centroid mm |
 |---|---|---|---|---|---|
 | `outerpad` | +0.022 | P1 | 0.012 | 7.037168e-5 | (134.600, 0, +22.000) |
-| `innerpad` | -0.022 | P1 | 0.012 | 7.037168e-5 | (134.600, 0, -22.000) |
 | `bp_outer` | +0.031 | P2 | 0.006 | 4.398230e-5 | (135.111, 0, +31.000) |
-| `bp_inner` | -0.031 | P2 | 0.006 | 4.398230e-5 | (135.111, 0, -31.000) |
+
+The flipped instances are then expected at `innerpad` (134.600, 0, -22.000) and
+`bp_inner` (135.111, 0, -31.000), the same volumes.
 
 1. `open_new_part`.
 2. `add_reference_geometry(type='plane', ref_plane_name='Front Plane', offset=<table>)`.
@@ -90,21 +94,35 @@ back to the four-sketch base described in that file.
 
 **A1.** `open_new_assembly`.
 
-**A2.** Nine `insert_component` calls, in this order: `cheek_out`, `cheek_in`,
-`vanes`, `hat`, `outerpad`, `innerpad`, `bp_outer`, `bp_inner`, `calliper`.
-Each call uses `file_path='C:\\brake-runs\\<run-id>\\10_cad\\<part>.SLDPRT'`,
-`transform_json='[1,0,0,0,1,0,0,0,1,0,0,0,1]'` and `fixed=true`. Never use x, y
-and z: they centre the bounding box. Tick each part off a written list of 9 as
-its call returns.
+**A2.** Nine `insert_component` calls, all with `fixed=true` and
+`file_path='C:\\brake-runs\\<run-id>\\10_cad\\<file>.SLDPRT'`, in this order:
+
+| # | Body | `<file>` | `transform_json` |
+|---|---|---|---|
+| 1 | cheek_out | cheek_out | `[1,0,0,0,1,0,0,0,1,0,0,0,1]` |
+| 2 | cheek_in | cheek_out | `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]` (180 deg about +X) |
+| 3 | vanes | vanes | identity |
+| 4 | hat | hat | identity |
+| 5 | outerpad | outerpad | identity |
+| 6 | innerpad | outerpad | `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]` |
+| 7 | bp_outer | bp_outer | identity |
+| 8 | bp_inner | bp_outer | `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]` |
+| 9 | calliper | calliper | identity |
+
+Never use x, y and z: they centre the bounding box. The flip matrix is symmetric,
+so SolidPilot's transposed-rotation trap (`frames-and-placement.md`) cannot bite.
+The returned readback for 2, 6 and 8 must be the flip matrix. Tick each row off
+as its call returns.
 
 **A3. Component gate, before anything is saved or exported.**
 `analyze_assembly(analysis_type='components')`.
 - `component_count` = **9**.
-- The names are `cheek_out-1`, `cheek_in-1`, `vanes-1`, `hat-1`,
-  `outerpad-1`, `innerpad-1`, `bp_outer-1`, `bp_inner-1` and `calliper-1`.
-  Instance numbers may differ.
-- Every transform is exactly `[1,0,0, 0,1,0, 0,0,1, 0,0,0, 1]`. (This
-  SolidPilot build returns no `children` field; nothing to check there.)
+- The names are `cheek_out-1`, `cheek_out-2`, `vanes-1`, `hat-1`,
+  `outerpad-1`, `outerpad-2`, `bp_outer-1`, `bp_outer-2` and `calliper-1`.
+  Instance numbers may differ; map each to its body by its transform.
+- Six transforms are exactly identity and three (`cheek_in`, `innerpad`,
+  `bp_inner`) are exactly `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]`. (This SolidPilot build
+  returns no `children` field; nothing to check there.)
 - On-miss: insert the missing parts and repeat A3. **Do not go on to A5 with
   fewer than 9.** A transform that is not identity: delete that component and
   re-insert it.
@@ -131,11 +149,11 @@ clearances come from the `calliper-1` faces here and the pad and plate bands:
 
 **A7. Count the file, before any report is written: 1 call.** Use
 `execute_code`, or PowerShell `Select-String`. Never type bare `python`.
-- `MANIFOLD_SOLID_BREP` = **28**.
-- PRODUCT (regex `= ?PRODUCT ?\(`) = **10**.
+- `MANIFOLD_SOLID_BREP` = **25** (instances share one solid).
+- PRODUCT (regex `= ?PRODUCT ?\(`) = **7**; `NEXT_ASSEMBLY_USAGE_OCCURRENCE` = **9**.
 - Record the `FILE_SCHEMA` value and the SHA-256.
-- On-miss: 23 means the pads, plates and calliper are missing (run 1). Go back
-  to A3.
+- On-miss: fewer solids or occurrences means a part or an instance is missing
+  (run 1 exported 23 of 28). Go back to A3.
 
 **A8. Hashes and report: 2 calls.** Do **not** re-open `brake.step` in
 SolidWorks: run 2 measured that step at about 22 calls (SolidWorks imports it as
@@ -165,15 +183,18 @@ number or a tolerance.
 
 Gate 1 is ready only when:
 
-- The four pads and plates each print volume and centroid PASS lines against
-  the table above.
+- `outerpad` and `bp_outer` print volume and centroid PASS lines against the
+  table above; `innerpad` and `bp_inner` rows are derived from them and the
+  read-back flip transform.
 - The calliper prints 6.170815e-4 m^3 and (146.143, 0.000, +0.369) mm as 1 body.
 - A3 printed `component_count` 9 with the 9 names and identity transforms
   **before** A5.
-- A7 counted 28 `MANIFOLD_SOLID_BREP` and 10 PRODUCT in the file **before**
+- A7 counted 25 `MANIFOLD_SOLID_BREP`, 7 PRODUCT and 9
+  `NEXT_ASSEMBLY_USAGE_OCCURRENCE` in the file **before**
   `cad_report.json` was written.
-- Every one of the 28 bodies has a per-part volume and centroid PASS line, and
-  no STEP re-import was done.
+- Every built part has a volume and centroid PASS line, the three flipped rows
+  are derived from their source part and the read-back flip transform, and no
+  STEP re-import was done.
 - `cad_report.json` has `assembly`, `timing`, `step`, `native_hashes`
-  (10 files), 28 body rows with `vane_01` to `vane_20` in angular order, and no
+  (7 files), 28 body rows with `vane_01` to `vane_20` in angular order, and no
   view or drawing keys.

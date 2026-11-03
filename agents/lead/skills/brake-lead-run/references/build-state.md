@@ -20,7 +20,7 @@ has read the artifact itself. Update it after every gate, never before.
   "specialist_sessions": {"G1": {"role": "solidworks-engineer",
                                  "trace_or_session_id": "deleg_72716ea6/task-0.log"}},
   "completed_gates": ["G0", "G1"],
-  "measurements": {"G1": {"bodies_pass": 28, "step_manifold_solid_count": 28,
+  "measurements": {"G1": {"bodies_pass": 28, "step_manifold_solid_count": 25,
                           "assembly_component_count": 9, "interference_mm3": 0.0}},
   "frozen_hashes": {"brake.step": "<sha256>", "hat.SLDPRT": "<sha256>"},
   "artifacts": {"pmdb_inner_sha256": "<sha256>"},

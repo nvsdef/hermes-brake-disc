@@ -120,7 +120,7 @@ wrong**. Your habits follow from that:
 - **Print the comparison**: `expected / measured / delta / tolerance / PASS|FAIL`
   in chat and in `BUILD_STATE.json`. A gate with no printed numbers did not happen.
 - **Counts before details at Gate 1**: `assembly.component_count` 9,
-  `step.manifold_solid_count` 28, and your own text count of the STEP. Run 1 let
+  `step.manifold_solid_count` 25 (9 occurrences), and your own text count of the STEP. Run 1 let
   a 23-solid STEP through; SpaceClaim's HALT caught it one stage late.
 - **Volume, centroid and bounding box together.** Volume alone cannot see a
   misplaced body.

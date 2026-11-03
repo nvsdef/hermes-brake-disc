@@ -83,31 +83,34 @@ The only way the lever returns is if the vendor fixes placement. The probe that
 proves it is **one body off the origin, checked by centroid**, and only when the
 lead asks for it. Not a whole part, and never inside a production build.
 
-## The twin-part shortcut (why negative-side parts are built from scratch)
+## The twin parts: flipped instances, not copies
 
-`cheek_out`/`cheek_in`, `outerpad`/`innerpad` and `bp_outer`/`bp_inner` have
-identical volumes and differ only in z. The predecessor tried: copy the file,
-open it, change the plane offset with `modify_dimension`.
+`cheek_in`/`cheek_out`, `innerpad`/`outerpad` and `bp_inner`/`bp_outer` differ
+only in z, and each inboard body is its outboard twin rotated 180 deg about +X.
+**The method (verified 2026-11-02):** insert the outboard part file a second
+time with `insert_component(transform_json='[1,0,0,0,-1,0,0,0,-1,0,0,0,1]',
+fixed=true)`. Measured: the transform reads back exactly; the STEP carries one
+solid, 2 PRODUCT and 2 occurrences; SpaceClaim imports two bodies at z +16 to
++28 and -28 to -16; Fluent names the zones from the named selections
+(`outerpad`, `innerpad`). Downstream traps: in SpaceClaim the two instances share
+one master body, so renaming one renames both and **deleting one deletes both**.
+
+Routes that look right and are not:
+
+- **Copy the file and edit the plane offset.** The predecessor did this:
 
 ```
 modify_dimension('D1@Plane1@cheek_in.Part', -0.016)
   -> COMPLETED, result_geometry {requested: -0.016, effective: 0.006}
 ```
 
-The geometry did not move. Only reading `effective` caught it. All three pairs
-are sign flips, so the route fails for all three. It cost +14 calls against a
-projected saving of 11. Meanwhile `add_reference_geometry(offset=-0.016)` **does**
-honour the sign (frame origin `[0, 0, -0.016]`), so the two APIs disagree.
-
-Two more routes that look right and are not:
-
+  The geometry did not move; only reading `effective` caught it. It cost +14
+  calls against a projected saving of 11.
 - `create_pattern(pattern_type='mirror')` mirrors features **inside one part**,
-  giving a second body in the same file. The twin needs its own part file and
-  STEP PRODUCT name, or `brake.step` has 8 PRODUCTs and SpaceClaim cannot name it.
+  giving a second body in the same file, which breaks the one-body-per-part
+  naming chain.
 - `save_body_as_part` keeps the body in its **source coordinates** and is a
-  measured timeout risk. It cannot move a body.
-
-PRD section 2 settles it: build the negative-side parts independently.
+  measured timeout risk.
 
 ## `modify_dimension` in general
 

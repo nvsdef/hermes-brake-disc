@@ -54,10 +54,12 @@ When a commission asks you to build, rebuild or check `cheek_out`, `cheek_in`,
 On-miss: right volume with a wrong centroid means a wrong plane. Delete the
 plane and the extrude, and rebuild.
 
-## Part 2: `cheek_in` - 7 calls
+## Part 2: `cheek_in` - 0 calls (not built)
 
-Same as Part 1, but with `offset=-0.011` and a frame origin of [0, 0, -0.011].
-Expect a centroid of (0, 0, **-11.000**) mm. Save as `cheek_in.SLDPRT`.
+`cheek_in` is not a part file. It is a second instance of `cheek_out.SLDPRT`,
+inserted in the assembly rotated 180 deg about +X (`sw-pads-calliper` A2). Its
+expected centroid (0, 0, -11.000) mm and z band -16 to -6 follow from the
+cheek_out measurement and the read-back transform.
 
 ## Part 3: `vanes` - 15 calls
 

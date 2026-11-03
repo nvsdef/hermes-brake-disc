@@ -15,7 +15,8 @@ nine inserts, re-export): about 30 minutes lost. Nothing had read the
 component count before the export.
 
 So the order is fixed: insert 9 -> `analyze_assembly('components')` shows 9
-(A3) -> save -> export -> count 28 solids in the file (A7) -> only then write
+(A3) -> save -> export -> count 25 solids, 7 products and 9 occurrences in the
+file (A7) -> only then write
 the report. The lead re-checks `step.manifold_solid_count` itself.
 
 ## 2. Assembly checks (A3)
@@ -156,7 +157,7 @@ it.
   "requirements": {"PKG-01": {"measured": null, "unit": "mm", "expected": 330.0, "source": "<key>"}},
   "cad_material": {"all": {"name": null, "reason": "not assigned; mass from PRD density"}},
   "step": {"path": "<path>", "sha256": null, "manifold_solid_count": null, "product_count": null,
-           "ap_schema": null, "unit_context": null},
+           "occurrence_count": null, "ap_schema": null, "unit_context": null},
   "native_hashes": {"cheek_out.SLDPRT": null, "brake.SLDASM": null},
   "limitations": []
 }
@@ -166,12 +167,14 @@ The `null` values are placeholders to be replaced by measurements. A `null`
 that stays needs a `reason` beside it, and it makes the status FAIL or HALTED,
 never PASS. The 28 body rows are `cheek_out`, `cheek_in`, `vane_01` to
 `vane_20` (angular order), `hat`, `outerpad`, `innerpad`, `bp_outer`,
-`bp_inner` and `calliper`. `assembly.components` holds the nine names read
-back in A3. `native_hashes` has exactly 10 entries: the 9 parts and
-`brake.SLDASM`. There are no `views` and no helper assemblies.
+`bp_inner` and `calliper`. The `cheek_in`, `innerpad` and `bp_inner` rows carry
+`"source": "flip of <part>"`: centroid and bbox are the source part's measured
+values with y and z negated, confirmed by the component transform read back in
+A3. `assembly.components` holds the nine names and transforms read back in A3.
+`native_hashes` has exactly 7 entries: the 6 part files and `brake.SLDASM`. There are no `views` and no helper assemblies.
 
 `timing.tool_calls` is your running count, which is approximate. Count
-`app_launches.solidworks_documents` as 9 parts + 1 assembly = 10. `solidworks_sessions_started` is 1 if `ensure_ready` had to
+`app_launches.solidworks_documents` as 6 parts + 1 assembly = 7. `solidworks_sessions_started` is 1 if `ensure_ready` had to
 launch SolidWorks, and 0 if it attached to a running session.
 
 ## 8. Handing back Gate 1

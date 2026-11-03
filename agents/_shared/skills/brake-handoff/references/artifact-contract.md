@@ -50,7 +50,7 @@ status FAIL or BLOCKED.
 | Gate | Folder | Files | Key JSON content |
 |---|---|---|---|
 | 0 | `00_lead` | `case.json` | PRD section 5 with formulas, materials, numerics, deferred list |
-| 1 | `10_cad` | 9 `.SLDPRT` (cheek_out, cheek_in, vanes, hat, outerpad, innerpad, bp_outer, bp_inner, calliper), `brake.SLDASM` (all 9 components), `brake.step`, `cad_report.json` | `bodies[]` 28 rows with volume, centroid, bbox, expected values, delta, `bbox_method`, pass; `assembly {component_count: 9, components}` read before export; `interference_mm3` with `interference_method`; `clearances_mm`; `requirements`; `step {path, sha256, manifold_solid_count: 28, product_count: 10, ap_schema}`; `native_hashes`; `timing`. No drawings or views |
+| 1 | `10_cad` | 6 `.SLDPRT` (cheek_out, vanes, hat, outerpad, bp_outer, calliper), `brake.SLDASM` (9 components: cheek_out, outerpad and bp_outer twice, the second flipped), `brake.step`, `cad_report.json` | `bodies[]` 28 rows with volume, centroid, bbox, expected values, delta, `bbox_method`, pass; `assembly {component_count: 9, components}` read before export; `interference_mm3` with `interference_method`; `clearances_mm`; `requirements`; `step {path, sha256, manifold_solid_count: 25, product_count: 7, ap_schema}`; `native_hashes`; `timing`. No drawings or views |
 | 2 | `20_spaceclaim` | `brake.pmdb\brake.pmdb` (a folder holding the file), `tag_report.json` (written by `scripts/stages/spaceclaim_prep.py`) | `inputs_sha256`, `session`, `checks[]`, `body_map` (28), `calliper_match`, `named_selections` with before-imprint areas (wall-vent 167 037.60, wall-outer 240 205.78, pad/backing exposed 42 997.28 mm^2, each 2 %) and the after-imprint predictions, `pmdb` and `pmdb_sha256` of the inner file, `spaceclaim_left_running`, `phase_seconds`, `timing` |
 | 3 | `30_fluent` | `brake.msh.h5`, `brake-fast.cas.h5` / `.dat.h5`, `results.json` (written by `scripts/stages/fluent_fast.py`) | `inputs_sha256`, `settings` (PRD 6A), `mesh` (27 solid zones, 45 coupled pairs, friction areas, sha256), `checks[]`, readbacks, `history[]` per load window, `summary`, `live_contour`, `phase_seconds`, `timing` |
 | 4 | `00_lead` | `gate_log.md`, final `BUILD_STATE.json` | gate tables, per-stage timing, Gate 3 summary, a disposition for every requirement and DV item |
@@ -78,7 +78,7 @@ brake.msh.h5 --------------------> results.json.mesh.sha256
 
 Rules:
 
-- **Gate 1 freezes the geometry.** From then on the 9 part files, the assembly and
+- **Gate 1 freezes the geometry.** From then on the 6 part files, the assembly and
   `brake.step` are read-only for everybody. A changed hash is a gate failure, not
   a rebuild.
 - **A repair upstream voids everything downstream.** A new `brake.step` means a new
@@ -105,7 +105,7 @@ h = hashlib.sha256(open(p, "rb").read()).hexdigest()
 
 | Check | Expected | Note |
 |---|---|---|
-| `MANIFOLD_SOLID_BREP` count | 28 | the vanes part contributes 20; run 1 exported 23 from an assembly missing 5 parts |
-| `PRODUCT` entities, pattern `= ?PRODUCT ?\(` | 9 parts + 1 assembly = 10 on the predecessor's SolidWorks export | the pattern `^#[0-9]*=PRODUCT` returns 0 on a real SolidWorks file (it writes `#123 = PRODUCT ( ... )` with spaces) and "passes" by failing to match |
+| `MANIFOLD_SOLID_BREP` count | 25 (9 `NEXT_ASSEMBLY_USAGE_OCCURRENCE`) | the vanes part contributes 20; the 3 flipped instances share their twin's solid; run 1 exported 23 from an assembly missing 5 parts |
+| `PRODUCT` entities, pattern `= ?PRODUCT ?\(` | 6 part files + 1 assembly = 7 | the pattern `^#[0-9]*=PRODUCT` returns 0 on a real SolidWorks file (it writes `#123 = PRODUCT ( ... )` with spaces) and "passes" by failing to match |
 | schema | `ap_schema` recorded as found in `FILE_SCHEMA` | SolidPilot's export has no AP-version argument |
 | units | **not** checked by text | see `units-and-scale.md`: scale is proven by measurement at import |

@@ -12,7 +12,7 @@ metadata:
 
 # sc-fast-prep - SpaceClaim prep in one job (PRD H1.2, fast run profile)
 
-Gate 2 turns the frozen `brake.step` (28 solids) into `brake.pmdb` (27 named
+Gate 2 turns the frozen `brake.step` (28 bodies after import) into `brake.pmdb` (27 named
 solids plus two face groups) that Fluent can mesh. The work is done by a vetted
 stage script, `scripts/stages/spaceclaim_prep.py`, built from the code that
 passed Gate 2 on run FR330V-20261102-0936. Your job is to check the
@@ -49,6 +49,13 @@ about 45 s, import 4 s, everything else under 5 s).
    writes `tag_report.json`, closes SpaceClaim and records whether it is gone.
 
 No screenshots: images are descoped in the fast profile.
+
+**Instanced bodies.** `cheek_in`, `innerpad` and `bp_inner` arrive as flipped
+instances of `cheek_out`, `outerpad` and `bp_outer`. In SpaceClaim each pair
+shares one master body: renaming one renames both and **deleting one deletes
+both**. The script therefore names bodies only through named selections (which
+are per instance, and which Fluent uses for zone names) and deletes only the
+calliper.
 
 ## Procedure
 

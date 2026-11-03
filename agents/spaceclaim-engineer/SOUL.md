@@ -6,7 +6,7 @@ I am the **spaceclaim-engineer**, the geometry-preparation specialist of the
 FR-330V brake project (PRD H1.2, fast run profile). The lead commissions me with
 a goal that starts with `ROLE: spaceclaim-engineer`. I own Gate 2:
 
-- **In:** `10_cad\brake.step` (28 solids) and `10_cad\cad_report.json`, both
+- **In:** `10_cad\brake.step` (25 solids, 9 occurrences: 28 bodies after import) and `10_cad\cad_report.json`, both
   accepted by the lead at Gate 1, with their SHA-256 in my commission.
 - **Out, in `C:\brake-runs\<run-id>\20_spaceclaim\`:** `brake.pmdb` (a folder
   holding the file `brake.pmdb`: 27 solids, 27 body selections, `wall-vent` and

@@ -56,8 +56,8 @@ keys, gates). This skill restates their numbers exactly.
 ```
 lead        00_lead\case.json                          duty cycle, materials, numerics
    |
-solidworks  10_cad\*.SLDPRT (9), brake.SLDASM (9 comp.) 28 bodies, true global position
-            10_cad\brake.step                          28 manifold solids, calliper INCLUDED
+solidworks  10_cad\*.SLDPRT (6), brake.SLDASM (9 comp., 3 flipped) 28 bodies, true global position
+            10_cad\brake.step                          25 solids / 9 occurrences, calliper INCLUDED
             10_cad\cad_report.json                     signatures, assembly.component_count,
                                                         step.manifold_solid_count, hashes, timing
                                                         (FROZEN at Gate 1)
@@ -106,7 +106,7 @@ geometry: a defect goes back to its owner with the measurement that proves it.
    opened before handing back.
 8. **Assert areas, not counts** (`references/area-reconciliation.md`).
 9. **Count at the source.** Gate 1 is not passed until the lead has read
-   `assembly.component_count` 9 and `step.manifold_solid_count` 28 and counted
+   `assembly.component_count` 9 and `step.manifold_solid_count` 25 (9 occurrences) and counted
    the STEP text itself. Run 1 sent a 23-solid STEP downstream.
 
 ## 4. The numbers that cross the boundaries (PRD sections 4 and 6)
@@ -114,7 +114,7 @@ geometry: a defect goes back to its owner with the measurement that proves it.
 | Quantity | Value | Checked at |
 |---|---|---|
 | assembly components | 9 | Gate 1 |
-| bodies in STEP | 28 manifold solids (9 parts; `vanes` holds 20); 10 PRODUCT entities | Gate 1, Gate 2 import |
+| bodies in STEP | 25 manifold solids, 7 PRODUCT, 9 occurrences (6 part files; `vanes` holds 20; cheek, pad and plate each used twice, the second flipped 180 deg about +X); 28 bodies after import | Gate 1, Gate 2 import |
 | rotor volume (cheeks + vanes + hat) | 1.801777e-3 m^3 = 1 801 776.57 mm^3 | Gate 1, Gate 2 scale |
 | all 28 bodies | 2 647 566.01 mm^3 | Gate 2 scale |
 | calliper | 617 081.48 mm^3, centroid (146.143, 0.000, +0.369) mm, bbox x max 200.0 mm | Gate 1, Gate 2 match |
@@ -146,7 +146,7 @@ the next stage:
 
 1. The input hashes equal the hashes in the commission, and the PMDB hash is of
    the inner file `brake.pmdb\brake.pmdb`.
-2. Gate 1: 9 assembly components and 28 STEP solids, read from the report and
+2. Gate 1: 9 assembly components and 25 STEP solids / 9 occurrences, read from the report and
    counted by the lead.
 3. The body count and the total volume match section 4 within 1 % (0.5 % for
    the calliper drop), and the calliper match was unique.

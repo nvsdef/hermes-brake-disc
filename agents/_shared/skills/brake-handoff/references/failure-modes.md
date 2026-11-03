@@ -11,7 +11,7 @@ PRD's geometry. Most of them **reported success while being wrong**.
 | 20 vanes reported, 1 body exists | circular-pattern feature | solidworks-engineer | one closed profile per vane from rotated coordinates |
 | hat z range wrong (for example -43 to +16) | revolve direction or reverse flag trusted | solidworks-engineer | measure the bbox; rebuild |
 | calliper volume about 1 % off, band section area wrong at z = +40 | windows or bores on the wrong z band | solidworks-engineer | use the band section areas in PRD section 4 to localise |
-| STEP has fewer than 28 solids | assembly missing parts (run 1: 23 solids, 5 parts never inserted), a part exported as surfaces, or a body merged | solidworks-engineer | check `assembly.component_count` = 9 before export; re-export; count `MANIFOLD_SOLID_BREP` |
+| STEP has fewer than 25 solids or 9 occurrences | assembly missing parts (run 1: 23 solids, 5 parts never inserted), a part exported as surfaces, or a body merged | solidworks-engineer | check `assembly.component_count` = 9 before export; re-export; count `MANIFOLD_SOLID_BREP` |
 | `PermissionError: [Errno 13]` opening `brake.pmdb` | the export wrote a folder `brake.pmdb\` holding the file `brake.pmdb` | whoever opened it | open and hash `brake.pmdb\brake.pmdb` |
 | import volume off by 16 387 or 1e9 | unit context misread, or a scale applied | whoever scaled; else solidworks-engineer | never scale; measure |
 | every geometric query returns zero faces | wrong scale (the `SI_UNIT` text check passed on an inch file) | spaceclaim-engineer to report | measure scale first |

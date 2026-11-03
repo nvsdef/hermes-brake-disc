@@ -33,7 +33,8 @@ status: authoritative for every run of this package
 
 A vented Ø330 mm grey-iron brake rotor with an integral hat, one pair of pads with
 steel backing plates, and a scalloped calliper that clears the pad stack. The
-assembly is **9 part files containing 28 solid bodies**, built in SolidWorks,
+assembly is **9 components (6 part files, 3 of them used twice) containing 28
+solid bodies**, built in SolidWorks,
 prepared in SpaceClaim, and solved in Fluent as a transient solid-conduction
 model of **one** braking stop.
 
@@ -63,30 +64,44 @@ model of **one** braking stop.
 
 ## 2. Parts, bodies and placement
 
-Build every part **at its true global position** and assemble with **identity
-transforms**. Nothing is moved after it is built.
+Build every part file **at its true global position**. The six outboard-built
+parts are assembled with **identity transforms**. The three inboard bodies are
+**instances of their outboard twin rotated 180 deg about +X** (transform
+`[1,0,0,0,-1,0,0,0,-1,0,0,0,1]`): the rotation maps (x, y, z) to (x, -y, -z), and the
+cheek (an annulus) and the pad and plate (sectors symmetric about y = 0) land
+exactly on their inboard bands. Nothing is moved after it is built.
 
-| # | Part file (exact name) | Bodies | Cross-section | Axial band (z) | Material |
-|---|---|---|---|---|---|
-| 1 | `cheek_out` | 1 | annulus r = 95 to 165 | +6 to +16 | MAT-01 grey iron |
-| 2 | `cheek_in` | 1 | annulus r = 95 to 165 | -16 to -6 | MAT-01 grey iron |
-| 3 | `vanes` | **20** | curved strips, section 3.2 | -6 to +6 | MAT-01 grey iron |
-| 4 | `hat` | 1 | revolved polygon + 5 bolt holes, section 3.3 | -16 to +43 | MAT-01 grey iron |
-| 5 | `outerpad` | 1 | sector r = 120 to 160, angle -30 to +30 | +16 to +28 | MAT-02 pad |
-| 6 | `innerpad` | 1 | sector r = 120 to 160, angle -30 to +30 | -28 to -16 | MAT-02 pad |
-| 7 | `bp_outer` | 1 | sector r = 115 to 165, angle -30 to +30 | +28 to +34 | MAT-03 steel |
-| 8 | `bp_inner` | 1 | sector r = 115 to 165, angle -30 to +30 | -34 to -28 | MAT-03 steel |
-| 9 | `calliper` | 1 | scalloped body, section 3.4 | -57 to +57 | (not solved) |
-| | **Total** | **28** | | | |
+| # | Body (PRD name) | Built as | Bodies | Cross-section | Axial band (z) | Material |
+|---|---|---|---|---|---|---|
+| 1 | `cheek_out` | part `cheek_out` | 1 | annulus r = 95 to 165 | +6 to +16 | MAT-01 grey iron |
+| 2 | `cheek_in` | instance of `cheek_out`, flipped | 1 | annulus r = 95 to 165 | -16 to -6 | MAT-01 grey iron |
+| 3 | `vanes` | part `vanes` | **20** | curved strips, section 3.2 | -6 to +6 | MAT-01 grey iron |
+| 4 | `hat` | part `hat` | 1 | revolved polygon + 5 bolt holes, section 3.3 | -16 to +43 | MAT-01 grey iron |
+| 5 | `outerpad` | part `outerpad` | 1 | sector r = 120 to 160, angle -30 to +30 | +16 to +28 | MAT-02 pad |
+| 6 | `innerpad` | instance of `outerpad`, flipped | 1 | sector r = 120 to 160, angle -30 to +30 | -28 to -16 | MAT-02 pad |
+| 7 | `bp_outer` | part `bp_outer` | 1 | sector r = 115 to 165, angle -30 to +30 | +28 to +34 | MAT-03 steel |
+| 8 | `bp_inner` | instance of `bp_outer`, flipped | 1 | sector r = 115 to 165, angle -30 to +30 | -34 to -28 | MAT-03 steel |
+| 9 | `calliper` | part `calliper` | 1 | scalloped body, section 3.4 | -57 to +57 | (not solved) |
+| | **Total** | 6 part files, 9 components | **28** | | | |
+
+`brake.step` therefore holds **25** `MANIFOLD_SOLID_BREP` (one per unique body:
+cheek 1, vanes 20, hat 1, pad 1, plate 1, calliper 1), **7** PRODUCT (6 parts +
+the assembly) and **9** `NEXT_ASSEMBLY_USAGE_OCCURRENCE`; SpaceClaim expands the
+occurrences to **28** bodies. Verified on 2026-11-02 (SolidWorks transform
+readback, STEP counts, SpaceClaim placement, Fluent zone names).
 
 Rules that apply to every part:
 
-- **One part file per row.** Only `vanes` holds more than one body. The four
+- **One part file per built part.** Only `vanes` holds more than one body. The
   rotor parts stay **separate bodies** - never merge cheeks, vanes and hat.
 - Touching parts **abut exactly** (shared faces, zero overlap volume). These
   contacts become the solver's thermal interfaces.
-- Build `innerpad` and `bp_inner` **independently** at their own negative z
-  bands. Do not copy-and-edit the outboard parts.
+- Make the inboard bodies only by the flipped instance above. Never copy a file
+  and edit its plane offset (`modify_dimension` drops the sign), and never use a
+  mirror feature (it makes a second body inside one file).
+- In SpaceClaim, an instanced body shares its master: renaming one renames both,
+  and **deleting one deletes both**. Only the calliper (not instanced) is ever
+  deleted. Names reach Fluent through named selections, not body names.
 
 ---
 

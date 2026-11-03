@@ -125,3 +125,14 @@ an end-to-end run of about 10 minutes, no report, no images.
 45. **No palette tricks.** The contour uses the true min-to-max range of the
     displayed surfaces. The user's request to make a partial solve look fully
     solved was answered by solving the full stop instead (about 50 s more).
+46. **Inboard twins are flipped instances** (supersedes decision 7). `cheek_in`,
+    `innerpad` and `bp_inner` are second instances of `cheek_out`, `outerpad` and
+    `bp_outer`, inserted with transform `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]` (180 deg
+    about +X). Probed 2026-11-02 before adoption: SolidWorks reads the transform
+    back exactly; the STEP holds one solid per unique part (25), 7 PRODUCT, 9
+    occurrences; SpaceClaim imports each occurrence as its own body at the right
+    z band; Fluent names zones from the per-instance named selections. Two traps
+    found and handled: in SpaceClaim the instances share a master body, so a
+    rename hits both (the stage script no longer renames bodies) and deleting one
+    deletes both (only the calliper is ever deleted). Saves 3 part builds (about
+    21 SolidPilot calls) at Gate 1.

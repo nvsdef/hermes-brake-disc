@@ -78,8 +78,9 @@ one check script and one message.
 - [ ] Announce; delegate; end turn.
 - [ ] On the notice: open `10_cad\cad_report.json` yourself and run the Gate 1
       checklist (`references/gate-checklists.md`).
-- [ ] **`assembly.component_count` == 9 and your own `MANIFOLD_SOLID_BREP` text
-      count of `brake.step` == 28** (and 10 PRODUCT).
+- [ ] **`assembly.component_count` == 9 and your own text count of `brake.step`:
+      25 `MANIFOLD_SOLID_BREP`, 7 PRODUCT, 9 `NEXT_ASSEMBLY_USAGE_OCCURRENCE`**
+      (three bodies are flipped instances that share a solid; 28 after import).
 - [ ] 28 bodies within tolerance, interference 0, vane sweep +1. Recompute and
       freeze the 10 native hashes and the STEP hash.
 

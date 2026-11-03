@@ -122,8 +122,9 @@ This is why every body is gated on centroid and bbox as well as volume.
 `cheek_in` is `cheek_out` shifted by -22 mm. The predecessor tried copying the
 file and editing the plane offset. `modify_dimension` returned `COMPLETED` with
 `{requested: -0.016, effective: 0.006}`: the part did not move, and the volume
-gate would have passed it. PRD section 2 now requires the negative-side parts to
-be built independently.
+gate would have passed it. Since 2026-11-02 the inboard twins are made as
+flipped instances of the outboard part (180 deg about +X), not as copies; see
+`sw-solidpilot/references/tool-traps.md`.
 
 ## 7. Where predecessor numbers differ from the PRD
 
@@ -138,7 +139,7 @@ Follow the PRD. These differences are expected, not defects:
 | hat outer radius | 97 on the retired design model | 95 | retired geometry |
 | hat web top | z = -3 on the retired design model | z = -6 | inlet fully open |
 | hat-to-calliper clearance | 1.0 mm (retired hat) | 11.8 mm (hat wall r 86.18 at z = +38.6 vs r = 98) | computed from current geometry |
-| cheek_in, innerpad, bp_inner | "derive from twin" | build independently | measured failure of the shortcut |
+| cheek_in, innerpad, bp_inner | "copy and edit the twin" | flipped instance of the twin | copy-and-edit measured to fail; the rotated instance verified |
 | bolt-hole cut | blind cut with a direction flag | a cut that spans the whole flange (for example z = +32 to +44, mid-plane) so direction cannot matter | the gate, not the recipe, is binding |
 | rotation sign | flipped twice in the predecessor | clockwise viewed from +Z, omega0 = -84.1751 rad/s | derived from the arcs |
 

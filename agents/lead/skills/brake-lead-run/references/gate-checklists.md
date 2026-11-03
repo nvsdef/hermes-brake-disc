@@ -59,14 +59,16 @@ parts) through to SpaceClaim.
 | Check | Expected | How |
 |---|---|---|
 | `assembly.component_count` | **9** (cheek_out, cheek_in, vanes, hat, outerpad, innerpad, bp_outer, bp_inner, calliper) | read the key and the name list |
-| `step.manifold_solid_count` | **28** | read the key |
-| your own STEP text count | 28 `MANIFOLD_SOLID_BREP`, 10 `PRODUCT` | text scan below |
+| `step.manifold_solid_count` | **25** | read the key |
+| your own STEP text count | 25 `MANIFOLD_SOLID_BREP`, 7 `PRODUCT`, 9 `NEXT_ASSEMBLY_USAGE_OCCURRENCE` | text scan below |
+| `assembly.components` transforms | 6 identity, 3 = `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]` (cheek_in, innerpad, bp_inner) | read the key |
 
 API idiom (read-only text scan, PowerShell):
 
 ```
-(Select-String -Path "<RUN>\10_cad\brake.step" -Pattern "MANIFOLD_SOLID_BREP" -AllMatches).Matches.Count   # 28
-(Select-String -Path "<RUN>\10_cad\brake.step" -Pattern "= ?PRODUCT ?\(" -AllMatches).Matches.Count        # 10
+(Select-String -Path "<RUN>\10_cad\brake.step" -Pattern "MANIFOLD_SOLID_BREP" -AllMatches).Matches.Count   # 25
+(Select-String -Path "<RUN>\10_cad\brake.step" -Pattern "= ?PRODUCT ?\(" -AllMatches).Matches.Count        # 7
+(Select-String -Path "<RUN>\10_cad\brake.step" -Pattern "NEXT_ASSEMBLY_USAGE_OCCURRENCE" -AllMatches).Matches.Count   # 9
 ```
 
 `^#[0-9]*=PRODUCT` returns 0 on a real SolidWorks STEP (it writes
@@ -131,7 +133,7 @@ solidworks-engineer.
 | `clearances_mm` rotor OD to bridge / hat wall to calliper end wall | 13.0 / 11.8 |
 | `step.sha256` | equals your recomputed hash |
 | `step.product_count` | 10 |
-| `native_hashes` | 10 entries (9 SLDPRT + SLDASM), each equal to your recomputed hash |
+| `native_hashes` | 7 entries (6 SLDPRT + SLDASM), each equal to your recomputed hash |
 | `vane_hand` | angle increases with r; rotation clockwise from +Z; consistent with `case.json` |
 
 **Requirements block**: PKG-01 330.0 mm, PKG-02 32.0 mm, PKG-03 5 x dia 14 on
@@ -142,7 +144,7 @@ inlet gap about 7 mm, PAD-01 60 deg, PAD-02 120 to 160 mm, PAD-03 12 mm, PAD-04
 
 There are no drawings or views to check at Gate 1 in H1.2.
 
-**Result**: PASS only if component count is 9, the STEP has 28 solids (key and
+**Result**: PASS only if component count is 9, the STEP has 25 solids and 9 occurrences (key and
 your own count), all 28 rows pass, interference is 0 and all hashes match. Then
 freeze the 11 hashes (9 SLDPRT, SLDASM, STEP).
 

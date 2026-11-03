@@ -7,7 +7,7 @@ SpaceClaim removes it from the simulation copy before exporting the PMDB. One
 export plus one documented subtraction cannot drift apart; two exports can.
 
 ```
-SolidWorks   brake.step    28 solids, calliper included
+SolidWorks   brake.step    25 solids / 9 occurrences (28 bodies), calliper included
 SpaceClaim   identify all 28 -> name and tag the 27 -> delete the calliper LAST -> export PMDB
 PMDB         27 solids
 Fluent       27 solid cell zones

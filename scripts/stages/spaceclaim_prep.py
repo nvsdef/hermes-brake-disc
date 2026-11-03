@@ -157,7 +157,8 @@ try:
     if len(named) != 27 or any(len(v) != 1 for v in named.values()):
         raise SystemExit("re-identification after delete is not a permutation")
     for n, [b] in named.items():
-        b.name = n
+        # no b.name = n: flipped instances share a master body, so a rename hits both;
+        # the per-instance named selection is what Fluent turns into the zone name
         design.create_named_selection(n, bodies=[b])
     t = phase("name_bodies", t)
 

@@ -24,23 +24,26 @@ checks. They are not scripts to replay, and nothing in them overrides the PRD.
 
 ## 1. What you build - exactly this, nothing else
 
-**Nine part files containing 28 solid bodies**, PRD section 2:
+**Six part files, nine assembly components, 28 solid bodies**, PRD section 2.
+`cheek_in`, `innerpad` and `bp_inner` are not part files: they are second
+instances of `cheek_out`, `outerpad` and `bp_outer`, rotated 180 deg about +X
+(`[1,0,0,0,-1,0,0,0,-1,0,0,0,1]`) when inserted:
 
-| # | Part file | Bodies | What it is | z band (mm) |
+| # | Body (built as) | Bodies | What it is | z band (mm) |
 |---|---|---|---|---|
 | 1 | `cheek_out` | 1 | plain annulus r = 95 to 165 | +6 to +16 |
-| 2 | `cheek_in` | 1 | plain annulus r = 95 to 165 | -16 to -6 |
+| 2 | `cheek_in` (flipped `cheek_out`) | 1 | plain annulus r = 95 to 165 | -16 to -6 |
 | 3 | `vanes` | **20** | 20 disjoint curved strips, PRD 3.2 | -6 to +6 |
 | 4 | `hat` | 1 | revolved (z, r) polygon + 5 x Ø14 holes on Ø115 PCD | -16 to +43 |
 | 5 | `outerpad` | 1 | sector r = 120 to 160, -30 to +30 deg | +16 to +28 |
-| 6 | `innerpad` | 1 | same sector | -28 to -16 |
+| 6 | `innerpad` (flipped `outerpad`) | 1 | same sector | -28 to -16 |
 | 7 | `bp_outer` | 1 | sector r = 115 to 165, -30 to +30 deg | +28 to +34 |
-| 8 | `bp_inner` | 1 | same sector | -34 to -28 |
+| 8 | `bp_inner` (flipped `bp_outer`) | 1 | same sector | -34 to -28 |
 | 9 | `calliper` | 1 | scalloped body, PRD 3.4 | -57 to +57 |
 
-Plus `brake.SLDASM` (**all nine** parts, identity transforms, component count
-read back as 9 **before** the STEP export), `brake.step` (28 solids, counted in
-the file), and `cad_report.json`. Nothing else: **no drawings, no view sheets,
+Plus `brake.SLDASM` (**nine components**: six identity, three flipped; count and
+transforms read back **before** the STEP export), `brake.step` (25 solids, 7
+products, 9 occurrences, counted in the file), and `cad_report.json`. Nothing else: **no drawings, no view sheets,
 no helper assemblies.** 2D drawings are descoped in H1.2, and SpaceClaim takes
 the CAD screenshots at Gate 2.
 
@@ -63,10 +66,11 @@ Rules that never bend:
   sit exactly on z = +16 and z = -16. Backing plates sit exactly on z = +28 and
   z = -28. Vanes end exactly at z = -6 and z = +6. The hat meets `cheek_in` on the
   r = 95 cylinder between z = -16 and z = -6.
-- **Build `cheek_in`, `innerpad` and `bp_inner` independently** at their own
-  negative z bands. Do not copy a file and edit its plane offset. The predecessor
-  measured that route: `modify_dimension` reported `COMPLETED` for a -0.016 m
-  offset and left the effective value at +0.006 m.
+- **Make `cheek_in`, `innerpad` and `bp_inner` only as flipped instances** of
+  their outboard part (verified 2026-11-02 through SolidWorks, STEP, SpaceClaim
+  and Fluent). Never copy a file and edit its plane offset: `modify_dimension`
+  reported `COMPLETED` for a -0.016 m offset and left the effective value at
+  +0.006 m. Never use a mirror feature: it makes a second body in one file.
 - **Build the vanes from the data cards.** One closed profile per vane, 20
   profiles in one sketch, pasted from `sw-rotor-build` ->
   `references/sketch-data.md` in four batches. Never rotate coordinates by hand:
@@ -182,9 +186,10 @@ FAIL, OPEN or BLOCKED. Missing is never zero and never PASS.
 - `cad_report.json` follows `specs/handoffs.md` Gate 1 exactly: 28 body rows
   (`vane_01` to `vane_20` in angular order), `assembly` (component_count 9 and
   the names), `timing`, `interference_mm3`, `clearances_mm`, `requirements`,
-  `step` and `native_hashes` (10 files). The detail is in
+  `step` and `native_hashes` (7 files). The detail is in
   `sw-pads-calliper` -> `references/assembly-and-report.md`.
-- The STEP must hold **28** `MANIFOLD_SOLID_BREP`. Count them in the file
+- The STEP must hold **25** `MANIFOLD_SOLID_BREP`, 7 PRODUCT and 9
+  `NEXT_ASSEMBLY_USAGE_OCCURRENCE` (SpaceClaim expands them to 28 bodies). Count them in the file
   **before** writing `cad_report.json`; the export call's status is not a
   count. Run 1 wrote PASS on a 23-solid STEP.
 

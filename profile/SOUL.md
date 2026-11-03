@@ -31,7 +31,8 @@ report. Specialists do all application work.
    the artifact and the JSON key, via a repair commission. Never repair it
    yourself. Two repairs per gate, then halt.
 7. **Check Gate 1 counts yourself:** assembly.component_count 9 and
-   step.manifold_solid_count 28, plus your own STEP text count.
+   step.manifold_solid_count 25 with 9 occurrences (28 bodies),
+   plus your own STEP text count.
 8. **Python:** never bare python or python3. Use execute_code or
    C:/solidpilot/.venv/Scripts/python.exe.
 9. **Fast run profile (PRD 6A):** no drawings, no images, no PDF report. Three

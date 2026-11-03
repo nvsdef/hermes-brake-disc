@@ -149,7 +149,7 @@ End your final reply with one JSON block:
 ROLE: solidworks-engineer - Gate 1 CAD build for run <RUN_ID>. Build the nine
 FR-330V parts (28 solid bodies) at true global position in SolidWorks, assemble
 all 9 with identity transforms, measure every body against PRD section 4, export
-brake.step (28 solids), and write cad_report.json in <RUN>\10_cad\. No drawings.
+brake.step (25 solids / 9 occurrences = 28 bodies), and write cad_report.json in <RUN>\10_cad\. No drawings.
 Child <N> of <BUDGET>.
 ```
 
@@ -164,15 +164,17 @@ INPUT
 
 WHAT TO BUILD (PRD sections 2 and 3; mm in the PRD, METRES in SolidPilot:
 divide by 1000 once, at the call)
-- 9 part files, exact names: cheek_out, cheek_in, vanes, hat, outerpad,
-  innerpad, bp_outer, bp_inner, calliper. One part per file. Only 'vanes' has
-  more than one body (20). Never merge cheeks, vanes and hat.
+- 6 part files, exact names: cheek_out, vanes, hat, outerpad, bp_outer,
+  calliper. One part per file. Only 'vanes' has more than one body (20). Never
+  merge cheeks, vanes and hat.
+- cheek_in, innerpad and bp_inner are NOT built: insert cheek_out.SLDPRT,
+  outerpad.SLDPRT and bp_outer.SLDPRT a second time with
+  transform_json='[1,0,0,0,-1,0,0,0,-1,0,0,0,1]' (180 deg about +X).
 - Z is the shaft axis, origin at the vent mid-plane, +Z outboard. Pads centred
   on +X. Angles from +X towards +Y.
-- Build every part at its true global position. Assemble brake.SLDASM with ALL
-  9 parts at identity transforms. Nothing is moved after it is built.
-- Build innerpad and bp_inner independently at their own negative z bands; do
-  not copy-and-edit the outboard parts.
+- Build every part at its true global position. Assemble brake.SLDASM with 9
+  components: 6 identity, 3 flipped. Nothing is moved after it is built.
+- Never copy a part file and edit its offset, never use a mirror feature.
 - Vanes: region between circles R117 and R123 about C = (20.722, 94.249),
   branch whose angle INCREASES with r (about -2.3 to +2.3 deg at r = 95, +29.8 to
   +33.4 deg at r = 165), trimmed to exact r = 95 and r = 165 cylinders, extruded
@@ -220,13 +222,13 @@ STEP from an assembly missing 5 parts)
   vanes, hat, outerpad, innerpad, bp_outer, bp_inner, calliper). If it lists
   fewer, insert the missing parts and re-read. Do not export an 8-component
   assembly.
-- AFTER export: count MANIFOLD_SOLID_BREP in brake.step with a text scan: 28.
-  Count PRODUCT entities with the pattern "= ?PRODUCT ?\(": 10.
+- AFTER export: count in brake.step with a text scan: MANIFOLD_SOLID_BREP 25,
+  PRODUCT (pattern "= ?PRODUCT ?\(") 7, NEXT_ASSEMBLY_USAGE_OCCURRENCE 9.
   If either is wrong, fix the assembly and re-export (HALT rule applies).
 
 OUTPUT CONTRACT (specs/handoffs.md Gate 1), all in <RUN>\10_cad\
-- cheek_out.SLDPRT, cheek_in.SLDPRT, vanes.SLDPRT, hat.SLDPRT, outerpad.SLDPRT,
-  innerpad.SLDPRT, bp_outer.SLDPRT, bp_inner.SLDPRT, calliper.SLDPRT
+- cheek_out.SLDPRT, vanes.SLDPRT, hat.SLDPRT, outerpad.SLDPRT, bp_outer.SLDPRT,
+  calliper.SLDPRT
 - brake.SLDASM (all 9 components)
 - brake.step (one export, calliper included, 28 manifold solids)
 - cad_report.json with:
@@ -243,8 +245,10 @@ OUTPUT CONTRACT (specs/handoffs.md Gate 1), all in <RUN>\10_cad\
   requirements {PKG-01..05, MAS-01, GEO-01..04, GEO-06, PAD-01..05: measured
     value, unit, how measured}
   vane_hand {theta_at_r95_deg, theta_at_r165_deg, rotation_viewed_from_plus_z}
-  step {path, sha256, manifold_solid_count, product_count, ap_schema}
-  native_hashes {file name: sha256} for all 9 SLDPRT and the SLDASM
+  step {path, sha256, manifold_solid_count, product_count, occurrence_count, ap_schema}
+  native_hashes {file name: sha256} for the 6 SLDPRT and the SLDASM
+  (bodies[] still has 28 rows; cheek_in, innerpad, bp_inner rows carry
+  "source": "flip of <part>", values = source measurement with y and z negated)
   timing (preamble A)
 
 DO NOT
@@ -280,7 +284,7 @@ gates. Child <N> of <BUDGET>.
 ```
 INPUTS (frozen at Gate 1; refuse to proceed if a hash differs)
 - <RUN>\10_cad\brake.step        sha256 <sha:brake.step>
-    (lead-verified: 28 MANIFOLD_SOLID_BREP, 10 PRODUCT, assembly 9 components)
+    (lead-verified: 25 MANIFOLD_SOLID_BREP, 7 PRODUCT, 9 occurrences, assembly 9 components)
 - <RUN>\10_cad\cad_report.json   sha256 <sha:cad_report.json>
 
 LAUNCH (once) with submit_ansys_job, cwd=<RUN>\20_spaceclaim, job_name g2_sc_prep,

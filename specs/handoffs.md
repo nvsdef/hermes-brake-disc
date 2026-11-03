@@ -38,10 +38,11 @@ within 0.1 %.
 
 ## Gate 1 - solidworks-engineer -> lead: CAD
 **Produces in `10_cad/`:**
-- `cheek_out.SLDPRT`, `cheek_in.SLDPRT`, `vanes.SLDPRT`, `hat.SLDPRT`,
-  `outerpad.SLDPRT`, `innerpad.SLDPRT`, `bp_outer.SLDPRT`, `bp_inner.SLDPRT`,
+- `cheek_out.SLDPRT`, `vanes.SLDPRT`, `hat.SLDPRT`, `outerpad.SLDPRT`,
+  `bp_outer.SLDPRT`,
   `calliper.SLDPRT`
-- `brake.SLDASM` with **all 9** components
+- `brake.SLDASM` with **all 9** components (`cheek_out`, `outerpad` and `bp_outer`
+  each inserted twice; the second instance flipped 180 deg about +X)
 - `brake.step`
 - `cad_report.json`
 
@@ -58,15 +59,17 @@ No drawing sheets, no view PDFs and no STEP re-import in SolidWorks.
 - `clearances_mm`, with each PRD section 4 clearance, measured.
 - `requirements`, with the measured values for PKG-01 to 05, MAS-01, GEO-01 to 04,
   GEO-06 and PAD-01 to 05.
-- `step`: `path`, `sha256`, `manifold_solid_count` (expected **28**),
-  `product_count` (expected 10) and `ap_schema`.
+- `step`: `path`, `sha256`, `manifold_solid_count` (expected **25**),
+  `occurrence_count` (expected **9**),
+  `product_count` (expected 7) and `ap_schema`.
 - `native_hashes`: SHA-256 of every `.SLDPRT` and `.SLDASM`. These freeze the
   geometry.
 - `vane_hand`.
 
 **Passes when** all 28 bodies are within PRD tolerance, the assembly has 9
-components, interference is 0, and the STEP holds 28 solids. The lead checks
-`step.manifold_solid_count` itself before commissioning Gate 2 (run 1 passed a
+components (six identity, three flipped 180 deg about +X), interference is 0,
+and the STEP holds 25 solids, 7 PRODUCT and 9 occurrences (28 bodies after
+import). The lead counts the STEP itself before commissioning Gate 2 (run 1 passed a
 23-solid STEP to SpaceClaim because the assembly was missing 5 parts).
 
 ---

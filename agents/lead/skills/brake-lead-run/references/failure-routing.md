@@ -16,7 +16,7 @@ carrying the failing areas, never a script from the lead.
 | Symptom (where you saw it) | Owner | Why |
 |---|---|---|
 | body volume, centroid or bbox miss (Gate 1) | solidworks-engineer | CAD geometry |
-| `assembly.component_count` not 9, or STEP solids not 28 (Gate 1) | solidworks-engineer | CAD assembly and export |
+| `assembly.component_count` not 9, or STEP not 25 solids / 9 occurrences (Gate 1) | solidworks-engineer | CAD assembly and export |
 | interference or clearance miss (Gate 1) | solidworks-engineer | CAD assembly |
 | fewer than 28 bodies imported, import scale wrong (Gate 2) | solidworks-engineer if the STEP text count or `cad_report.json` shows it; otherwise spaceclaim-engineer | the STEP is the evidence: recount it yourself |
 | calliper not unique, 28 bodies after delete (Gate 2) | solidworks-engineer if the signatures in `cad_report.json` are wrong; else lead (stage-script defect) | the script matches on measured signatures |
