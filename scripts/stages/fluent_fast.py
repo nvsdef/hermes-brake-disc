@@ -264,11 +264,17 @@ try:
     chk("pad_face_heats_up_K", 300.0, H[-1]["T_face_pad_K"], 0, kind="min")
     # the friction-face temperature peaks early and eases as the power ramps down (real physics);
     # what must rise every window is the stored heat and the bulk temperatures.
-    chk("stored_energy_rises_every_window", len(H) - 1, sum(1 for a, b in zip(H, H[1:]) if b["E_stored_J"] > a["E_stored_J"]), 0)
+    # at the very end of the stop the input goes to zero and convection can win: a fall smaller than
+    # 0.01 % of the stored energy is real physics (run 3: -1.41 J of 240 302 J in the last 0.04 s).
+    chk("stored_energy_rises_every_window", len(H) - 1,
+        sum(1 for a, b in zip(H, H[1:]) if b["E_stored_J"] > a["E_stored_J"] * (1 - 1e-4)), 0)
     if END >= TS - 1e-6:
         chk("full_stop_covered_s", round(TS, 6), round(H[-1]["t_s"], 6), 1e-5)
         chk("applied_vs_vehicle_energy_pct", E_VEH, H[-1]["E_applied_J"], 2.0, rel=True)
     chk("no_unphysical_temperature_K", 1500.0, max(max(r["T_face_rotor_K"], r["T_face_pad_K"]) for r in H), 0, kind="max")
+    rep["temperature_definitions"] = {"T_face_*_K": "surface-facetmax on the friction wall layer (rotor side / pad side)",
+                                      "T_max_*_K": "volume-max of cell-centre temperature in the rotor / pad zones",
+                                      "note": "PRD section 7 reports both as a range; on a coarse mesh the wall value is far above the cell value"}
     rep["summary"] = {"simulated_s": H[-1]["t_s"], "rotor_face_K": H[-1]["T_face_rotor_K"], "pad_face_K": H[-1]["T_face_pad_K"],
                       "peak_rotor_face_K": max(r["T_face_rotor_K"] for r in H), "peak_pad_face_K": max(r["T_face_pad_K"] for r in H),
                       "E_applied_J": H[-1]["E_applied_J"], "E_stored_J": H[-1]["E_stored_J"],

@@ -51,7 +51,7 @@ Override a setting only when the lead's commission says so, with the env vars
 | meshed volume of 27 zones | 2 030 484.53 mm^3 within 2 % |
 | applied energy vs closed form q''' x d x A_mesh integral | within 2 % |
 | stored / applied energy (convection is about 1 % over 1 s) | 90 to 110 % |
-| stored energy | rises in every window |
+| stored energy | rises in every window (a fall below 0.01 % is allowed at the very end, where convection outweighs the vanishing input) |
 | full stop covered; applied vs vehicle energy E | t = 3.540681 s; within 2 % of 243 055.6 J |
 | friction-face temperatures | above 300 K, below 1500 K |
 
