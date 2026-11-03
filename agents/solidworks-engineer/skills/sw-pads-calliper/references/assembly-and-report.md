@@ -1,7 +1,7 @@
 # Assembly, clearances, interference and `cad_report.json` (PRD H1.2)
 
 This is the tail of Gate 1. The contract is `specs/handoffs.md` Gate 1; the
-numbers are PRD section 4 and section 7. The procedure (steps A1 to A9) is in
+numbers are PRD section 4 and section 7. The procedure (steps A1 to A8) is in
 `SKILL.md`; this sheet holds the reasons, the measurement methods and the
 report schema.
 
@@ -26,7 +26,6 @@ the report. The lead re-checks `step.manifold_solid_count` itself.
 | names | `cheek_out-1`, `cheek_in-1`, `vanes-1`, `hat-1`, `outerpad-1`, `innerpad-1`, `bp_outer-1`, `bp_inner-1`, `calliper-1` (instance numbers may differ) |
 | each transform | exactly `[1,0,0, 0,1,0, 0,0,1, 0,0,0, 1]` |
 | each `fixed` | true |
-| children | 0 for every component |
 | source paths | all in `C:\brake-runs\<run-id>\10_cad\` |
 
 A translation equal to a bbox centre (for example `[..., 0, 0, 0.0135, 1]` on
@@ -36,12 +35,12 @@ with the identity string.
 SolidPilot has no mass-property read for an assembly. The placement spot check
 (A4) therefore reads planar faces of three components with
 `analyze_assembly('faces', component=...)` and applies the payload transform.
-The full proof of placement is the STEP re-import (A8): 28 bodies with global
+The full proof of placement is SpaceClaim's Gate 2 import: 28 bodies with global
 centroids, compared with PRD section 4.
 
 ## 3. Clearances (PRD section 4), measured
 
-SolidPilot has no distance tool. Take positions from the A8 faces read (z) and
+SolidPilot has no distance tool. Take positions from the A4 faces read (z) and
 from the part geometry (radii), subtract, and record both positions and the
 difference.
 
@@ -132,9 +131,9 @@ it.
   "producing_role": "solidworks-engineer",
   "started_at": "<iso>", "finished_at": "<iso>",
   "status": "PASS | FAIL | HALTED",
-  "input_hashes": {"specs/PRD.md": "<sha256>"},
+  "inputs_sha256": {"00_lead/case.json": "<sha256>"},
   "timing": {"started_at": "<iso>", "finished_at": "<iso>", "tool_calls": null,
-             "app_launches": {"solidworks_documents_opened": null, "solidworks_sessions_started": null},
+             "app_launches": {"solidworks_documents": null, "solidworks_sessions_started": null},
              "per_part_min": {"cheek_out": null, "vanes": null, "calliper": null, "assembly_and_step": null}},
   "bodies": [
     {"name": "cheek_out", "part": "cheek_out",
@@ -148,7 +147,7 @@ it.
                 "rotation_viewed_from_plus_z": "clockwise"},
   "assembly": {"path": "<...\\brake.SLDASM>", "component_count": null, "expected_component_count": 9,
                "components": [], "all_identity": null, "read_before_step_export": true,
-               "spot_check": {"cheek_out-1": null, "vanes-1": null, "calliper-1": null}},
+               "spot_check": {"cheek_out-1": null, "calliper-1": null}},
   "interference_mm3": null, "interference_method": "<method>",
   "clearances_mm": {"pad_stack_to_slot_outboard": null, "pad_stack_to_slot_inboard": null,
                     "slot_height": null, "pad_stack_height": null, "slot_minus_stack": null,
@@ -157,8 +156,7 @@ it.
   "requirements": {"PKG-01": {"measured": null, "unit": "mm", "expected": 330.0, "source": "<key>"}},
   "cad_material": {"all": {"name": null, "reason": "not assigned; mass from PRD density"}},
   "step": {"path": "<path>", "sha256": null, "manifold_solid_count": null, "product_count": null,
-           "ap_schema": null, "unit_context": null,
-           "reimport_check": {"bodies": null, "all_within_tolerance": null}},
+           "ap_schema": null, "unit_context": null},
   "native_hashes": {"cheek_out.SLDPRT": null, "brake.SLDASM": null},
   "limitations": []
 }
@@ -173,8 +171,7 @@ back in A3. `native_hashes` has exactly 10 entries: the 9 parts and
 `brake.SLDASM`. There are no `views` and no helper assemblies.
 
 `timing.tool_calls` is your running count, which is approximate. Count
-`app_launches.solidworks_documents_opened` as 9 parts + 1 assembly + 1 STEP
-re-import = 11. `solidworks_sessions_started` is 1 if `ensure_ready` had to
+`app_launches.solidworks_documents` as 9 parts + 1 assembly = 10. `solidworks_sessions_started` is 1 if `ensure_ready` had to
 launch SolidWorks, and 0 if it attached to a running session.
 
 ## 8. Handing back Gate 1

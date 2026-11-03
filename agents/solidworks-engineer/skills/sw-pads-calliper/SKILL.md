@@ -103,22 +103,27 @@ its call returns.
 - The names are `cheek_out-1`, `cheek_in-1`, `vanes-1`, `hat-1`,
   `outerpad-1`, `innerpad-1`, `bp_outer-1`, `bp_inner-1` and `calliper-1`.
   Instance numbers may differ.
-- Every transform is exactly `[1,0,0, 0,1,0, 0,0,1, 0,0,0, 1]` and every
-  component has children 0.
+- Every transform is exactly `[1,0,0, 0,1,0, 0,0,1, 0,0,0, 1]`. (This
+  SolidPilot build returns no `children` field; nothing to check there.)
 - On-miss: insert the missing parts and repeat A3. **Do not go on to A5 with
   fewer than 9.** A transform that is not identity: delete that component and
   re-insert it.
 
-**A4. Placement spot check in assembly context: 3 calls.** SolidPilot has no
+**A4. Placement spot check in assembly context: 2 calls.** SolidPilot has no
 centroid read for an assembly, so check faces. Call
-`analyze_assembly(analysis_type='faces', component=...)` for `cheek_out-1`,
-`vanes-1` and `calliper-1`. Apply the returned transform (identity, so local
+`analyze_assembly(analysis_type='faces', component=...)` for `cheek_out-1`
+and `calliper-1`. Skip `vanes-1`: there is no axis filter and it dumps all 120
+faces; the vanes' per-body centroids already place them. Apply the returned transform (identity, so local
 equals global). Expect:
 - `cheek_out-1`: planar faces at z = 0.006 and 0.016.
-- `vanes-1`: 40 planar faces at z = +/-0.006, each 6.043e-4 m^2.
 - `calliper-1`: planar faces at z = +/-0.057, +0.0386 and -0.039.
 
-The global centroids of all 28 bodies are measured in A8.
+Every part was built at its true global position and the transforms are
+identity, so each part's own `mass_properties` centroid (and `bodies` for the
+vanes) is already the global centroid. There is no STEP re-import in H1.2 fast:
+SpaceClaim's Gate 2 import re-measures all 28 bodies independently. The axial
+clearances come from the `calliper-1` faces here and the pad and plate bands:
+38.6 - 34 = 4.6 and -34 - (-39) = 5.0.
 
 **A5.** `save_document(file_path='...\10_cad\brake.SLDASM')`.
 
@@ -132,17 +137,10 @@ The global centroids of all 28 bodies are measured in A8.
 - On-miss: 23 means the pads, plates and calliper are missing (run 1). Go back
   to A3.
 
-**A8. Re-import and measure all 28 bodies: 4 calls.**
-`open_document(file_path=...brake.step)` flattens the STEP into one multibody
-part. Then:
-- `analyze_model('bodies')` gives 28 volumes and global centroids. Match them
-  by signature (the signature table is in `step-export.md` of `sw-solidpilot`).
-- `analyze_model('faces', axis='[0,0,1]')` gives the z extents of every body,
-  split by each body's face-index range. The axial clearances also come from
-  these faces: 38.6 - 34 = 4.6 and -34 - (-39) = 5.0.
-- `close_document(save=false)`. Close only this document.
-
-**A9. Hashes and report: 2 calls.** Use `execute_code` to compute the SHA-256
+**A8. Hashes and report: 2 calls.** Do **not** re-open `brake.step` in
+SolidWorks: run 2 measured that step at about 22 calls (SolidWorks imports it as
+an assembly, and its title collides with the open `brake.SLDASM`), and it proves
+nothing that the per-part reads and SpaceClaim's Gate 2 import do not. Use `execute_code` to compute the SHA-256
 of the 9 `.SLDPRT` files and `brake.SLDASM`. Then write `cad_report.json` with
 the file tool. The schema is in `references/assembly-and-report.md`. It
 includes the `assembly` and `timing` blocks, and it contains no views.
@@ -174,7 +172,8 @@ Gate 1 is ready only when:
   **before** A5.
 - A7 counted 28 `MANIFOLD_SOLID_BREP` and 10 PRODUCT in the file **before**
   `cad_report.json` was written.
-- A8 matched 28 re-imported bodies to PRD section 4.
+- Every one of the 28 bodies has a per-part volume and centroid PASS line, and
+  no STEP re-import was done.
 - `cad_report.json` has `assembly`, `timing`, `step`, `native_hashes`
   (10 files), 28 body rows with `vane_01` to `vane_20` in angular order, and no
   view or drawing keys.

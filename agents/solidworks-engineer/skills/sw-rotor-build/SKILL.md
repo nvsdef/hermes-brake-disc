@@ -59,7 +59,7 @@ plane and the extrude, and rebuild.
 Same as Part 1, but with `offset=-0.011` and a frame origin of [0, 0, -0.011].
 Expect a centroid of (0, 0, **-11.000**) mm. Save as `cheek_in.SLDPRT`.
 
-## Part 3: `vanes` - 12 calls
+## Part 3: `vanes` - 15 calls
 
 1. `open_new_part`.
 2. `create_sketch(plane='Front Plane')`. Expect frame origin [0, 0, 0], xdir +X,
@@ -69,15 +69,16 @@ Expect a centroid of (0, 0, **-11.000**) mm. Save as `cheek_in.SLDPRT`.
    Each call must return segment_count 20, arc_center 10 and line 10.
 7. `extrude_feature(feature_type='boss', depth=0.012, mid_plane=true)`. Expect
    **1.901692e-4 m^3** in 20 bodies.
-8. `create_sketch(plane='Front Plane')`.
-9. `add_sketch_entities(segments=<card R6>)`: three circles, r = 0.260, 0.165
-   and 0.095. Expect circle 3.
-10. `extrude_feature(feature_type='cut', depth=0.020, mid_plane=true)`. Expect
-    **1.450325e-4 m^3** in 20 bodies.
-11. `analyze_model('bodies')`. This is the one measurement for the part. Expect
-    20 rows, each 7.251627e-6 m^3 within 1 %. Each centroid should sit at
+8. `create_sketch(plane='Front Plane')`, `add_sketch_entities(segments=<card R6a>)`
+   (circle 2), `extrude_feature(feature_type='cut', depth=0.020, mid_plane=true)`.
+   Expect about 1.72e-4 m^3 in 20 bodies.
+9. `create_sketch(plane='Front Plane')`, `add_sketch_entities(segments=<card R6b>)`
+   (circle 2), `extrude_feature(feature_type='cut', depth=0.020, mid_plane=true)`.
+   Expect about **1.45e-4 m^3** in 20 bodies (the returned volume is coarse).
+10. `analyze_model('bodies')`. This is the binding measurement for the part.
+    Expect 20 rows, each 7.251627e-6 m^3 within 1 %. Each centroid should sit at
     r = 130.154 mm and z = 0.
-12. `save_document(file_path='...\10_cad\vanes.SLDPRT')`.
+11. `save_document(file_path='...\10_cad\vanes.SLDPRT')`.
 
 **Name the bodies by angle:** the body at atan2(cy, cx) = 17.917 + (k - 1) x
 18 deg (mod 360) is `vane_k`. Use `execute_code`, never bare `python`. The
@@ -88,7 +89,7 @@ On-miss:
 | Symptom | Cause | Repair |
 |---|---|---|
 | step 7 gives 1 body or `EXTRUSION_FAILED` | a card was altered or a record failed | `analyze_model('sketch', name=...)`, delete the sketch, re-send the cards unchanged |
-| step 10 gives about 1.723384e-4 | only the outer ring was cut | delete the cut; cut r 0.165/0.260 and r 0.010/0.095 as two sketches (see the card notes) |
+| step 9 still gives about 1.72e-4 | the inner cut did not apply | `analyze_model('sketch')`, delete the cut, re-send card R6b unchanged |
 | about 1.93e-4 total | depth 0.016 was used, not 0.012 | rebuild the boss |
 | centroids near 155 deg + (k - 1) x 18 | wrong branch; the cards were not used | rebuild from the cards |
 
@@ -129,7 +130,8 @@ used. A volume of 5.209e-4 after step 7 means the hole cut did nothing.
 | `hat` | 5.132043e-4 | (0, 0, +18.095) | x, y -95 to 95; z -16 to +43 |
 
 Tolerances: volume 1 %, centroid 0.1 mm, bbox 0.05 mm. The z extents are
-measured at the STEP re-import (`sw-pads-calliper` step A8). For x and y,
+the extrude bands on the data cards, confirmed by volume and centroid; the hat's
+z = -16 and +43 faces are read once with `analyze_model('faces', axis='[0,0,1]')`. For x and y,
 `bbox_method` is "data-card vertices, confirmed by volume and centroid".
 
 Rotor total 1.801777e-3 m^3, mass **12.973 kg** at 7200 kg/m^3 (MAS-01 <= 13.5).

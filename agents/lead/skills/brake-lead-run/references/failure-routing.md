@@ -19,14 +19,16 @@ carrying the failing areas, never a script from the lead.
 | `assembly.component_count` not 9, or STEP solids not 28 (Gate 1) | solidworks-engineer | CAD assembly and export |
 | interference or clearance miss (Gate 1) | solidworks-engineer | CAD assembly |
 | fewer than 28 bodies imported, import scale wrong (Gate 2) | solidworks-engineer if the STEP text count or `cad_report.json` shows it; otherwise spaceclaim-engineer | the STEP is the evidence: recount it yourself |
-| calliper not unique, 28 bodies after delete, named selection missing, area off (Gate 2) | spaceclaim-engineer | tagging |
-| screenshot missing, blank or unframed (Gate 2) | spaceclaim-engineer | CAD visuals are Gate 2 deliverables in H1.2 |
+| calliper not unique, 28 bodies after delete (Gate 2) | solidworks-engineer if the signatures in `cad_report.json` are wrong; else lead (stage-script defect) | the script matches on measured signatures |
+| named selection missing or an area off (Gate 2) | lead: stage-script defect in `spaceclaim_prep.py` | the face rule is in the script; halt and report, never patch mid-run |
+| `error` / `traceback` in `tag_report.json` or `results.json` | lead: stage-script defect | halt with the traceback; fix the package after the run |
+| `status: BLOCKED` (an Ansys session already running) | the user | ask them to close it; never kill it |
 | PMDB hash mismatch (Gate 2) | spaceclaim-engineer, unless you hashed the folder instead of `brake.pmdb\brake.pmdb` | check your own path first |
 | sliver or zero-area face found by SpaceClaim or the mesher | solidworks-engineer | the face exists in the CAD |
 | contact count below 45 because a contact does not touch in CAD | solidworks-engineer | abutment is a CAD property |
 | contact count below 45 because shared topology was not applied | fluent-engineer (mesh) or spaceclaim-engineer (a contact face was tagged) | read which |
-| internal mesh gate failed: quality, cell cap, zones, areas (Gate 3) | fluent-engineer | meshing |
-| setup readback wrong, energy audit outside band, solve short of ts (Gate 3) | fluent-engineer | solver |
+| mesh gate failed: zones, pairs, areas, volume (Gate 3) | spaceclaim-engineer (tagging) or solidworks-engineer (geometry); the script itself if neither | read which |
+| readback wrong, energy or heating gate failed (Gate 3) | lead: stage-script defect in `fluent_fast.py` | halt with the history rows |
 | `case.json` arithmetic wrong (found at any gate) | lead | Gate 0 is yours: fix it, re-hash, and re-commission Gate 3 |
 | frozen CAD hash changed after Gate 1 | whoever last opened the files | the run halts unless the owner restores the Gate 1 files |
 | missing `timing` block | the stage owner | a finding, not a gate failure |
@@ -70,9 +72,9 @@ gate fails
    Artifacts kept. No downstream stage was started.
    ```
 
-3. If Gate 0 passed, still write `review.md`: rows with evidence get their
-   disposition, the rest are OPEN with "stage not reached", deferred items stay
-   DEFERRED. Compose a short `report.pdf` if you can; mark it `halted` on page 1.
+3. If Gate 0 passed, still write `gate_log.md` and the requirement dispositions
+   in `BUILD_STATE.json`: rows with evidence get their disposition, the rest are
+   OPEN with "stage not reached", deferred items stay DEFERRED. No PDF.
 
 ## 4. Delegation failures
 

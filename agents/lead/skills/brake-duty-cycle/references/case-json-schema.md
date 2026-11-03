@@ -1,7 +1,7 @@
 # case.json - every field, unit and meaning
 
 `00_lead\case.json` is the single declaration of the load case. The
-fluent-engineer applies it and reads it back into `setup_report.json`; the review
+fluent-engineer applies it and reads it back into `results.json`; the lead
 compares the two. Write it by hand from your own computed values (there is no
 template file to copy in this package), then validate it against the checklist at
 the end of this page.

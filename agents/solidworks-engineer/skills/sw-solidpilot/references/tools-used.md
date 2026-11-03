@@ -16,16 +16,16 @@ filter SolidPilot to this list.
 | `create_sketch` | every sketch; returns the frame |
 | `add_sketch_entities` | every profile, from a data card (`segments` is a JSON string) |
 | `extrude_feature` | boss, cut, revolve; returns `result_geometry.volume` |
-| `analyze_model` | `mass_properties` once per part, `bodies` for the vanes and the STEP re-import, `faces` at the re-import, `features` or `sketch` after a timeout or a miss |
+| `analyze_model` | `mass_properties` once per part, `bodies` for the vanes, `faces` (axis `[0,0,1]`) for the hat and calliper z facesort, `features` or `sketch` after a timeout or a miss |
 | `edit_feature` | `action='delete'` for a HALT repair |
 | `save_document` | each part and `brake.SLDASM` |
 | `open_new_assembly` | `brake.SLDASM` |
 | `insert_component` | 9 parts, identity `transform_json`, `fixed=true` |
 | `analyze_assembly` | `components` (count 9 and names); `faces` for the placement spot check |
 | `export_document` | `brake.step` |
-| `open_document` | STEP re-import (it flattens to one multibody part) |
+| `open_document` | reopen a saved part after a crash (no STEP re-import in H1.2 fast) |
 | `activate_document` | re-activate `brake` if another document took focus |
-| `close_document` | close the re-imported STEP with `save=false` |
+| `close_document` | close a document you opened, never one you did not |
 
 Hermes profile idiom (the key name depends on the Hermes version; the list is
 the part that matters):

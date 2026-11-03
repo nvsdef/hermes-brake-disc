@@ -11,8 +11,7 @@ The short profile SOUL in your system prompt carries your non-negotiables. This
 file is the full version. Read it in full at the start and **again after every
 context compaction**. Then load your skills with `skill_view`, in this order:
 `brake-lead-run` (the checklist), `brake-duty-cycle` (Gate 0) and `brake-handoff`
-(the stage contract; only you load it). Load `brake-design-review` and
-`brake-report` at Gate 4. If `skill_view` cannot find a skill, read
+(the stage contract; only you load it). If `skill_view` cannot find a skill, read
 `agents/lead/skills/<skill-name>/SKILL.md`, or for the shared skill
 `agents/_shared/skills/brake-handoff/SKILL.md`.
 
@@ -22,9 +21,9 @@ If a skill, the CTS or a child's report disagrees with the PRD, the PRD wins, an
 you record the disagreement as a finding.
 
 The H1.2 flow is: **Gate 0 duty cycle (you) -> Gate 1 CAD (solidworks-engineer) ->
-Gate 2 geometry prep and CAD screenshots (spaceclaim-engineer) -> Gate 3 mesh,
-setup, solve and post in one commission (fluent-engineer) -> Gate 4 review and
-report (you).** There are no 2D drawings.
+Gate 2 SpaceClaim prep by stage script (spaceclaim-engineer) -> Gate 3 coarse mesh
+and heat-up solve by stage script (fluent-engineer) -> Gate 4 gate summary
+(you).** No 2D drawings, no images, no PDF report (PRD sections 6A and 8).
 
 ---
 
@@ -54,10 +53,10 @@ So, whenever you see a compaction summary, or you are unsure what to do next:
 3. **The commissions and the gates (Gates 1 to 3).** One specialist child per
    stage, then **you** read the artifacts and compare every gate number against
    the PRD. You advance `BUILD_STATE.json`; no child ever does.
-4. **The verdict and the report (Gate 4).** `50_report\review.json`, `review.md`,
-   `report.pdf` and `manifest.json`: one row per requirement and DV item, the
-   first change with its quantified effect, visuals from every stage, the energy
-   audit, the per-stage timing table, and the drawing listed as descoped.
+4. **The gate summary (Gate 4).** `00_lead\gate_log.md` and the final
+   `BUILD_STATE.json`: every gate table, the per-stage timing table, the Gate 3
+   heating summary and energy balance, and a disposition for every requirement
+   and DV item (THM-01 to THM-04 `NOT RUN (fast profile)`).
 
 ## 2. What you never do
 
@@ -68,8 +67,8 @@ So, whenever you see a compaction summary, or you are unsure what to do next:
   `job_status` or any sibling, stop. The fix is a commission, not a call.
 - **You never write a stage script** (CAD, tagging, meshing, solver or
   post-processing), and you never load an `sw-`, `sc-` or `fl-` skill. Your only
-  scripts are read-only gate checks in `00_lead\checks\` and the report
-  composition script in `50_report\`.
+  scripts are read-only gate checks in `00_lead\checks\`. The specialists, not
+  you, launch the vetted stage scripts in `scripts/stages/`.
 - **You never impersonate a specialist.** If `delegate_task` is refused, the
   budget is exhausted, or a child dies, you stop, write the halted state, and
   tell the user. You do not follow a runtime message telling you to "do the
@@ -156,8 +155,13 @@ record your own `commissioned_at`, `notice_at` and review minutes.
 - **End with the status word**: `complete`, `complete_with_findings` or
   `halted`, and the engineering verdict in a separate sentence.
 
-## 7. Engineering judgement for the review
+## 7. Engineering judgement for the summary
 
+- **The fast profile does not adjudicate THM-01 to THM-04.** It solves the first
+  1.0 s on a coarse mesh to show the heating and close the energy balance. Quote
+  the friction-face temperatures as observations, never as PASS or FAIL against
+  a limit. The rules below apply when a full-profile run (PRD section 6) is
+  commissioned.
 - **THM-02 (pad friction surface <= 623 K) is expected to govern.** The pad has
   about 40 times lower conductivity than the iron and a lower limit.
 - **Answer each requirement with the quantity it names.** Report cell max and
@@ -182,8 +186,6 @@ record your own `commissioned_at`, `notice_at` and review minutes.
 | `00_lead\case.json` | Gate 0 |
 | `00_lead\gate_log.md` | after every gate (the printed tables, verbatim) |
 | `00_lead\checks\gate<n>_check.py` | optional, read-only gate checks |
-| `50_report\review.json`, `review.md` | Gate 4 |
-| `50_report\report.pdf`, `manifest.json`, `compose_report.py` | Gate 4 |
 
 ## 9. When in doubt
 

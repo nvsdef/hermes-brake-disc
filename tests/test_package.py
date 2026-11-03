@@ -6,12 +6,13 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 ROLES = ['lead', 'solidworks-engineer', 'spaceclaim-engineer', 'fluent-engineer']
 EXPECTED_SKILLS = {
-    'lead': ['brake-lead-run', 'brake-duty-cycle', 'brake-design-review', 'brake-report'],
+    'lead': ['brake-lead-run', 'brake-duty-cycle'],
     'solidworks-engineer': ['sw-solidpilot', 'sw-rotor-build', 'sw-pads-calliper'],
-    'spaceclaim-engineer': ['sc-geometry-tagging'],
-    'fluent-engineer': ['fl-meshing', 'fl-thermal-solve', 'fl-postprocess-energy'],
+    'spaceclaim-engineer': ['sc-fast-prep'],
+    'fluent-engineer': ['fl-fast-run'],
     '_shared': ['brake-handoff'],
 }
+STAGE_SCRIPTS = ['fluent_fast.py', 'spaceclaim_prep.py']
 
 
 def skill_files():
@@ -23,7 +24,7 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in (ROOT / 'agents').iterdir() if p.is_dir()),
                          sorted(ROLES + ['_shared']))
         for role in ROLES:
-            self.assertGreater(len((ROOT / 'agents' / role / 'SOUL.md').read_text(encoding='utf-8').split()), 800)
+            self.assertGreater(len((ROOT / 'agents' / role / 'SOUL.md').read_text(encoding='utf-8').split()), 450)
 
     def test_expected_skills_present_and_routed_in_agents_md(self):
         agents_md = (ROOT / 'AGENTS.md').read_text(encoding='utf-8')
@@ -43,7 +44,7 @@ class PackageTests(unittest.TestCase):
             desc = re.search(r'^description: "(.+)"$', text, re.M).group(1)
             self.assertLessEqual(len(desc), 60, path)
             self.assertIn('## Verification', text, path)
-            self.assertGreater(len(text.split()), 700, path)
+            self.assertGreater(len(text.split()), 650, path)
             for relative in set(re.findall(r'references/[A-Za-z0-9_-]+\.md', text)):
                 self.assertTrue((path.parent / relative).is_file(), f'{path}: {relative}')
 
@@ -52,8 +53,9 @@ class PackageTests(unittest.TestCase):
         for path in (ROOT / 'agents').rglob('*.md'):
             self.assertIsNone(bad.search(path.read_text(encoding='utf-8')), path)
 
-    def test_no_prebuilt_engineering_code_or_completed_checkpoint(self):
+    def test_only_vetted_stage_scripts_and_clean_checkpoint(self):
         self.assertEqual([p.name for p in (ROOT / 'scripts').glob('*.py')], ['mcp_client.py'])
+        self.assertEqual(sorted(p.name for p in (ROOT / 'scripts' / 'stages').glob('*.py')), STAGE_SCRIPTS)
         self.assertEqual(list((ROOT / 'agents').rglob('*.py')), [])
         state = json.loads((ROOT / 'examples/BUILD_STATE.template.json').read_text())
         self.assertEqual(state['status'], 'pending')
@@ -68,11 +70,23 @@ class PackageTests(unittest.TestCase):
         for identifier in ids:
             self.assertIn(identifier, prd)
 
-    def test_no_drawing_stage_or_stale_revision(self):
-        for path in list((ROOT / 'agents').rglob('*.md')) + [ROOT / 'AGENTS.md', ROOT / 'specs/handoffs.md']:
+    def test_no_drawing_image_or_report_stage_or_stale_revision(self):
+        banned = re.compile(r'cad_iso|section_9deg\.png|named_selections\.png|report\.pdf|50_report|save_picture|'
+                            r'brake-report|brake-design-review|sc-geometry-tagging|fl-meshing|fl-thermal-solve|fl-postprocess')
+        files = list((ROOT / 'agents').rglob('*.md')) + [ROOT / 'AGENTS.md', ROOT / 'specs/handoffs.md',
+                                                         ROOT / 'profile/SOUL.md', ROOT / 'examples/prompt.md']
+        for path in files:
             text = path.read_text(encoding='utf-8')
             self.assertNotIn('H1.1', text, path)
-        self.assertFalse((ROOT / 'agents/solidworks-engineer/skills/sw-drawing-visuals').exists())
+            self.assertIsNone(banned.search(text), f'{path}: {banned.search(text)}')
+        for gone in ('solidworks-engineer/skills/sw-drawing-visuals', 'lead/skills/brake-report',
+                     'lead/skills/brake-design-review', 'spaceclaim-engineer/skills/sc-geometry-tagging'):
+            self.assertFalse((ROOT / 'agents' / gone).exists(), gone)
+
+    def test_no_step_reimport_in_cad_procedure(self):
+        text = (ROOT / 'agents/solidworks-engineer/skills/sw-pads-calliper/SKILL.md').read_text(encoding='utf-8')
+        self.assertNotIn('open_document(file_path=...brake.step)', text)
+        self.assertIn('No STEP re-import', (ROOT / 'agents/solidworks-engineer/SOUL.md').read_text(encoding='utf-8'))
 
     def test_prompt_is_short_and_points_at_prd(self):
         prompt = (ROOT / 'examples/prompt.md').read_text(encoding='utf-8').strip().splitlines()

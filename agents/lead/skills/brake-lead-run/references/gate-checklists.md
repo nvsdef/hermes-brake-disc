@@ -1,4 +1,4 @@
-# Gate-review checklists - what the lead reads and compares (PRD H1.2)
+# Gate-review checklists - what the lead reads and compares (PRD H1.2, fast run profile)
 
 Use this when a completion notice arrives. For each gate: open the artifact with
 your own file tool, recompute hashes, and compare every row below. Print the
@@ -6,7 +6,7 @@ table to the user with `expected / measured / delta / tolerance / result`.
 
 **Make it one step.** Write one read-only check (in `execute_code`, or a file
 `00_lead\checks\gate<n>_check.py` run with
-`C:/solidpilot/.venv/Scripts/python.exe`) that loads the JSON, hashes the files,
+`C:/solidpilot/.venv/Scripts/python.exe` or a sandbox `python3` on the mount) that loads the JSON, hashes the files,
 counts the STEP solids and prints the whole table. A check may only read, hash
 and compare. It never imports `ansys`, `pyfluent`, `ansys.geometry` or a
 SolidPilot client, never launches an application, and never writes into a stage
@@ -148,123 +148,53 @@ freeze the 11 hashes (9 SLDPRT, SLDASM, STEP).
 
 ---
 
-## Gate 2 - `20_spaceclaim\tag_report.json` (spaceclaim-engineer)
-
-| Key | Expected | Tolerance |
-|---|---|---|
-| `step_sha256` | frozen `brake.step` hash | exact |
-| `session` | 1 SpaceClaim launch, PID, connect-call count | 1 launch (more is a finding) |
-| `import_scale_check` rotor OD / z extents | 330 mm / -57 to +57 mm | 1 % |
-| `import_scale_check` total volume, 28 bodies | 2 647 566.01 mm^3 | 1 % |
-| `body_map` | 28 rows, each PRD name exactly once | exact |
-| `calliper_match` | 1 match (volume, centroid z +0.369, bbox x max 200.0), runner-up reported | unique |
-| `after_delete.body_count` | 27, on a re-read design | exact |
-| `after_delete.volume_drop` | calliper volume | 0.5 % |
-| `after_delete.total` | 2 030 484.53 mm^3 | 0.5 % |
-| `named_selections` body names | 27: cheek_out, cheek_in, hat, vane_01 to vane_20, outerpad, innerpad, bp_outer, bp_inner | exact |
-| `named_selections` face groups | exactly `wall-vent` and `wall-outer`; no contact face tagged | exact |
-| `wall-vent` area, **before imprint** | 167 037.60 mm^2 | 2 % (163 696.8 to 170 378.4) |
-| `wall-outer` area, before imprint (includes hat step face z = -6, r = 88 to 95) | 240 205.78 mm^2 | 2 % |
-| pad/backing exposed area, before imprint | 42 997.28 mm^2 | 2 % |
-| predicted after-imprint areas | 142 865.51 / 228 477.17 / 31 268.67 mm^2 | reported for Gate 3 |
-| `contact_graph` | 45 contacts | exact count |
-| pad/cheek and pad/backing contacts | 5 864.31 mm^2 each (4) | 2 % |
-| vane/cheek contacts | 604.30 mm^2 each (40) | 2 % |
-| hat/cheek_in contact | 5 969.03 mm^2 | 2 % |
-| hat/vanes | edge only, no face contact | reported |
-| `pmdb_sha256` | equals your hash of the **inner file** `20_spaceclaim\brake.pmdb\brake.pmdb` | exact |
-
-**PMDB is a folder.** `brake.pmdb` is a directory holding the file
-`brake.pmdb`. Hash `...\brake.pmdb\brake.pmdb`. Opening the folder as a file
-gives `PermissionError: [Errno 13]`; that is your path, not a bad export.
-
-**Area basis.** Gate 2 checks the before-imprint areas. A `wall-vent` about
-2.4 % high (about 171 062 mm^2) means the hat step face was put in vent. Areas
-far low (run 1: wall-vent 52 683.6 mm^2, -68 %) mean faces were misclassified.
-Both FAIL, owner spaceclaim-engineer.
-
-**Screenshots** (in `20_spaceclaim\`):
-
-| File | Must show | Vision question |
-|---|---|---|
-| `cad_iso.png` | full assembly **with** the calliper | "Is there a C-shaped calliper around a vented disc? Is the model centred and filling most of the frame?" |
-| `cad_section_9deg.png` | section through the vent inlet at 9 deg | "Is the hat attached to the inboard cheek? Is there an open gap between the hat wall and the vanes?" |
-| `named_selections.png` | wall-vent and wall-outer in distinct colours | "Are two different colours applied to the rotor faces? Is the viewport empty?" |
-
-Each file exists, is larger than 20 kB, and passes the vision question. A
-missing or blank screenshot is a FAIL of Gate 2 (they are the only CAD visuals
-in H1.2), owner spaceclaim-engineer.
-
-**Process check**: no `SpaceClaim.exe` or `Discovery.exe` left running by the
-child before you commission Fluent.
-
----
-
-## Gate 3 - `30_fluent\` (fluent-engineer, one commission)
-
-Read `mesh_report.json` first. If its status is FAIL the child stopped at the
-internal mesh gate and there is no solve to review.
-
-**Mesh** (`mesh_report.json`):
-
-| Key | Expected | Tolerance |
-|---|---|---|
-| inputs | PMDB inner-file hash equals Gate 2 `pmdb_sha256` | exact |
-| zone map / solid / fluid | 27 PRD names / 27 / 0 | exact |
-| `coupled_pairs[]` | 45: 2 cheek/pad, 2 pad/backing, 40 cheek/vane, 1 hat/cheek_in | exact |
-| coupled pair areas | 5 864.31, 5 864.31, 604.30, 5 969.03 mm^2 | 2 % |
-| max **surface** skewness | <= 0.90 | limit |
-| volumetric skewness | `null`, reason "not reported by Fluent 2026 R1" | does not block |
-| min orthogonal quality | >= 0.10 | limit |
-| negative-volume cells | 0 | exact |
-| per-zone volume | PRD section 4 values | 2 % |
-| cells + nodes | < 512 000 (Ansys Student) | limit |
-| wall-vent / wall-outer / pad-backing after imprint | 142 865.51 / 228 477.17 / 31 268.67 mm^2 | 2 % |
-| friction-face wall-normal cell, pad / cheek side | recorded; compare with 1.374 / 7.564 mm | recorded |
-| `mesh_sha256` | recomputed hash of `brake.msh.h5` | exact |
-
-If the pad-side wall-normal cell is coarser than 1.374 mm, tell the user now:
-THM-02 will be NOT ADJUDICABLE whatever the solve says.
-
-**Setup readback** (`setup_report.json`):
+## Gate 2 - `20_spaceclaim\tag_report.json` (spaceclaim-engineer, stage script)
 
 | Check | Expected |
 |---|---|
-| iron zones (23) / pad zones (2) / backing zones (2) | rho 7200, cp 447, k 52 / rho 2500, cp 900, k 1.2 / rho 8030, cp 502, k 16.3 |
-| motion enabled on | exactly `cheek_out`, `cheek_in`; axis +Z through origin; omega(0) -84.1751 rad/s |
-| h schedules | vent 130, outer 85, pad/backing 40 at omega_ref 56.1167; floor 7; exponent 0.8 |
-| layer | d = 0.002 m, one side only, material grey iron (MAT-01), never aluminium |
-| dt, steps | 0.01 s, 354 full + final 0.000681 s |
-| pre-solve applied-energy integral | 243 055.6 J +/- 2 % |
-| tangential-velocity check | <= 1.592987e-4 m^3/s per rad/s |
+| `status` | `PASS` |
+| `inputs_sha256["10_cad/brake.step"]`, `["10_cad/cad_report.json"]` | your frozen Gate 1 hashes |
+| every `checks[]` row | `pass: true` (import count, OD, z extents, 28-body volume, unique body map, after-delete count, volume drop, 27-body volume, 29 named selections, three before-imprint areas, PMDB written) |
+| `body_map` | 28 rows, 28 distinct names, worst score <= 1.0 |
+| `named_selections.count` | 29 |
+| wall-vent / wall-outer / pad-backing before imprint | 167 037.60 / 240 205.78 / 42 997.28 mm^2, 2 % |
+| your SHA-256 of `brake.pmdb\brake.pmdb` | equals `pmdb.sha256`; freeze it |
+| `spaceclaim_left_running` | `false` |
+| `timing.seconds`, `phase_seconds` | copied into `BUILD_STATE.timing.G2` |
 
-**Energy and results** (`results.json`):
-
-| Key | Expected |
-|---|---|
-| `coverage.covers_full_stop`, final time | true, 3.540681 s |
-| `energy_audit.E_applied_j` | 243 055.6 J +/- 2 % (DV-05) |
-| `energy_audit.ratio_pct` | 90 to 110 % |
-| `energy_audit.residual_j` | reported, with sign |
-| `energy_audit.E_applied_over_vehicle_pct` | within +/-2 % |
-| `peaks[]` | six rows keyed by `id`, each with `peak_k`, `peak_time_s`, `end_of_stop_k` |
-| `rotor_bulk_rise_k` | reported (upper estimate about 42 K) |
-| `mesh_sha256` | frozen mesh hash |
-| histories | CSVs exist, time column ends at 3.540681 |
-| images | mesh full view and vent close-up; contours with legend in K, time and range |
-
-Sanity checks (findings, not gates): pad peak hotter than rotor peak; peak well
-before ts; hat and mounting face near 300 K; rotor field smeared around the
-circumference.
-
-**Process check**: no Fluent process left running by the child.
+The 45 contacts are not measured here; Fluent's 45 coupled pairs prove them at
+Gate 3.
 
 ---
 
-## Gate 4 - your review and report
+## Gate 3 - `30_fluent\results.json` (fluent-engineer, stage script)
 
-See `brake-design-review` and `brake-report`. Checklist: 37 rows (every PRD
-section 7 ID and DV-01 to DV-10); nine fields per row; dispositions only from
-PASS, FAIL, NOT ADJUDICABLE, OPEN, DEFERRED; the drawing listed as descoped in
-`deliverables`; a first change with a quantified effect; the per-stage timing
-table; `report.pdf` verdict on page 1; manifest hashes match.
+| Check | Expected |
+|---|---|
+| `status` | `PASS` |
+| `inputs_sha256` | your frozen PMDB inner-file and `case.json` hashes |
+| every `checks[]` row | `pass: true` |
+| `mesh.solid_zones` / fluid | 27 PRD names / 0 |
+| `mesh.coupled_pairs` | 45 |
+| friction areas | 5 864.31 mm^2 each, 2 % |
+| meshed volume | 2 030 484.53 mm^3, 2 % |
+| `layer_material_readback` | `grey-iron` on both friction walls |
+| applied energy vs closed form | 2 % |
+| stored / applied | 90 to 110 % |
+| stored energy, rotor max T, pad max T | rise in every `history` window |
+| `history[-1].t_s` | `settings.end_time_s` (1.0 s by default) |
+| `live_contour.displayed` | `true` (Fluent is left open on purpose) |
+| `timing.seconds`, `phase_seconds` | copied into `BUILD_STATE.timing.G3` |
+
+Quote the `summary` block: peak and final friction-face temperatures (rotor and
+pad), applied and stored energy, and the fraction of the stop energy applied.
+It is a heating demonstration, not a THM verdict.
+
+---
+
+## Gate 4 - your gate summary
+
+`00_lead\gate_log.md` (the printed gate tables verbatim) and the final
+`BUILD_STATE.json`: gates, timing table, Gate 3 summary, and a disposition for
+every PRD section 7 ID and DV item per `specs/handoffs.md` Gate 4. No PDF, no
+images.

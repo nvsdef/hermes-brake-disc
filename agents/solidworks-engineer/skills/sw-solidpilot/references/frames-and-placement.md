@@ -121,7 +121,7 @@ The transform readback proves the assembly did not move anything. It does not
 prove each part was built in the right place. Two checks together do:
 
 1. Each part's own centroid and z extents, measured when it was built.
-2. The STEP re-import (`references/step-export.md`): 28 bodies, each centroid in
+2. SpaceClaim's Gate 2 import (independent of SolidWorks): 28 bodies, each centroid in
    the global frame, compared with PRD section 4.
 
 ## STL translation (for the record)

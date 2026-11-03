@@ -121,13 +121,15 @@ doing nothing or doing something else (the table is in `sw-solidpilot`).
 
 1. After **every** feature, compare `extrude_feature`'s returned
    `result_geometry.volume` with the data card's running checksum. It costs no
-   call.
+   call, but it is rounded to 2 to 3 significant figures: a sanity check, not
+   the 1 % gate.
 2. After **every finished part**, measure once with
    `analyze_model('mass_properties')` (`bodies` for the vanes): volume and
    centroid. Do not measure per feature unless the skill names the feature as
    risky (the hat revolve).
-3. After the assembly, the STEP re-import gives all 28 volumes, global
-   centroids and z extents in two reads.
+3. After the assembly, the component gate (9 components, identity transforms)
+   and the STEP solid count. No STEP re-import: SpaceClaim re-measures all 28
+   bodies at Gate 2.
 4. Compare each against PRD section 4 in the same step. Print one line per
    quantity: `expected / measured / delta / PASS|FAIL`. Tolerances: **volume
    within 1 %, centroid within 0.1 mm, bbox within 0.05 mm.**
@@ -200,8 +202,7 @@ assembly held 4 of 9 parts. The habits that remove that time:
   most). Disjoint profiles share one sketch. Use one cut for both vane ends and
   one contour for the calliper base and for the slot plus windows.
 - **Measure per part, not per feature.** Features are checked by their free
-  `result_geometry.volume`; parts by one `analyze_model`; all 28 bodies again
-  at the STEP re-import.
+  `result_geometry.volume`; parts by one `analyze_model`. No STEP re-import.
 - **Do not wander.** No drawings, no materials, no probing of banned tools, no
   closing and reopening of parts. Leave saved parts open.
 - **Python rule.** Never type bare `python` or `python3` in the terminal: on

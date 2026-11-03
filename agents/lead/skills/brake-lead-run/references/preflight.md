@@ -18,8 +18,6 @@ Every check below ends with a PASS or a STOP. A STOP ends the run with
    C:\brake-runs\<run-id>\10_cad
    C:\brake-runs\<run-id>\20_spaceclaim
    C:\brake-runs\<run-id>\30_fluent
-   C:\brake-runs\<run-id>\30_fluent\histories
-   C:\brake-runs\<run-id>\50_report
    ```
 
    There is **no** `40_drawing` folder: 2D drawings are descoped in H1.2.
@@ -27,7 +25,7 @@ Every check below ends with a PASS or a STOP. A STOP ends the run with
    Sync locks break Fluent and SolidWorks writes, and the failure looks like a
    permissions bug.
 
-**PASS** when the seven folders exist and are empty.
+**PASS** when the five folders exist and are empty.
 
 ## 2. BUILD_STATE.json
 
@@ -76,7 +74,6 @@ the project is unless you tell them.
 |---|---|---|
 | `delegate_task` (toolset `delegation`) | the only way you get work done | **STOP**: "delegate_task is not available to the lead; enable the `delegation` toolset in the profile's `platform_toolsets.cli`. No work was started." |
 | `skill_view`, file tools, terminal, `todo` | skills, artifacts, hashing, stage list | STOP |
-| `vision_analyze` (toolset `vision`) | screenshot and figure checks | warn; figure checks become findings |
 | `execute_code` (toolset `code_execution`) | arithmetic without a script file | not a stop: use `C:/solidpilot/.venv/Scripts/python.exe` and record `python_route` |
 
 Never type bare `python` or `python3` in the terminal: on this machine it opens
@@ -188,9 +185,9 @@ fine; the solidworks-engineer inventories its documents before mutating anything
 ## 8. No drawing stage
 
 Confirm the plan has exactly Gates 0 to 4 and three commissions. There is no
-Gate 5 drawing commission, no `rotor_only.SLDASM`, no `40_drawing` folder, and no
-`sw-drawing-visuals` skill in any commission. CAD visuals come from SpaceClaim
-at Gate 2 (`cad_iso.png`, `cad_section_9deg.png`, `named_selections.png`).
+drawing, image or report stage in H1.2 (PRD section 8): no drawing or report
+folder, no screenshots. The only visual is the live Fluent contour that the
+Gate 3 stage script leaves on screen.
 
 ## 9. Package tests (optional, skip when time matters)
 

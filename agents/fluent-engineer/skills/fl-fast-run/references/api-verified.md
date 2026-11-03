@@ -1,4 +1,4 @@
-# Verified PyFluent 0.41.0 API sheet (shared by fl-meshing, fl-thermal-solve, fl-postprocess-energy)
+# Verified PyFluent 0.41.0 API sheet (used by scripts/stages/fluent_fast.py; read it to diagnose a failure)
 
 Open this **before the first use of any PyFluent name** in a script. Run 1 lost
 an hour in SpaceClaim to invented attribute names (`bounding_box.min`,
@@ -195,7 +195,6 @@ runtime; record which path answered).
 - Scalar field: `ScalarFieldDataRequest(field_name="temperature", surfaces=names, node_value=True, boundary_value=True)` (SRC, UNVERIFIED).
 - Mesh object (RUN): `g = s.settings.results.graphics; g.mesh["mesh-all"] = {"surfaces_list": walls}; g.mesh["mesh-all"].display()`, then `s.tui.views.auto_scale()`, `g.views.restore_view(view_name="isometric")`, `g.views.camera.zoom(factor=1.3)`.
 - Contour (RUN): `g.contour[n] = {"field": "temperature", "surfaces_list": walls, "boundary_values": True, "node_values": True, "filled": True, "coloring": {"smooth": False}}`; banded range `g.contour[n].range_option.option = "auto-range-off"`, `.range_option.auto_range_off.minimum = lo`, `.maximum = hi`; `g.contour[n].display()`.
-- Picture (RUN): delete the PNG first, `s.tui.display.set.picture.driver.png()`, `g.picture.save_picture(file_name=png)`. It does not overwrite and ignores `x_resolution`.
 - `views.camera.orbit` raised on this build although it is in the schema (RUN failure).
 
 ## 10. Files that are not what they look like
@@ -206,7 +205,6 @@ runtime; record which path answered).
   `p = Path(x); inner = p / p.name if p.is_dir() else p; assert inner.is_file()`.
 - Hash with `hashlib.sha256(inner.read_bytes())`; compare with
   `tag_report.json.pmdb_sha256` (Gate 2 hashes the inner file).
-- Fluent monitor `.out` files and PNGs are never overwritten: delete first.
 
 ## 11. Probing a name instead of guessing it
 
@@ -223,7 +221,7 @@ Run it as one short step. Put the answer in your notes, then write the real call
 
 1. Attaching a second client with `connect_to_fluent` to the session launched in
    another process, and the workflow state being visible to it (source says yes;
-   never run here). Step 2 of fl-meshing is the runtime proof.
+   never run here). The fast stage script's mesh gate is the runtime proof.
 2. `application_runtime.exit()` and `force_exit()` from a connected client.
 3. Fluent's idle-timeout preference (`preferences.General.IdleTimeout`) after the
    launching client detaches: the launcher resets it to the preference value.
@@ -233,3 +231,24 @@ Run it as one short step. Put the answer in your notes, then write the real call
 6. `solution.controls.equations["flow"]`, residual key `"energy"`,
    `fields.reduction`, `ScalarFieldDataRequest`, `surface-area` reports.
 7. A 240 s `run_ansys_script` wait under Hermes (300 s configured timeout).
+
+## 12. Confirmed on 2026-11-02 (runs FR330V-20261102-0936 and the fast-profile test)
+
+- `s.switch_to_solver()` from the meshing session transfers the mesh: 27 solid
+  zones are present without `read_case` (RUN).
+- `report_definitions.compute(...)` is **inactive until the solution is
+  initialized**; call it after `standard_initialize()` (RUN failure, then RUN).
+- `compute(report_defs=[a, b, ...])` returns a **list with one `{name: [value, ...]}`
+  dict per definition**, not one dict (RUN).
+- `bc[w].thermal.get_state()` returns canonical keys: `heat_generation_rate`,
+  `thermal_condition`, `material`, `wall_thickness`; the friction layer material
+  reads back `grey-iron`, and the value set on `cheek_out-outerpad` also reads on
+  its `-shadow` (RUN).
+- Coupled pair names are `<zoneA>-<zoneB>` and `-shadow`; name order is not
+  adjacency (RUN). Exposed pad and backing walls are named `<body>:1` (RUN).
+- `pyfluent.launch_fluent(..., cleanup_on_exit=False)` leaves Fluent running after
+  the Python job exits; `s.exit()` on a failure path may not stop every process,
+  so terminate the Fluent processes the job started, by PID (RUN).
+- A background `ValueError: invalid literal for int() with base 10: ''` from
+  `streaming_services/_events_info_store.py` appears on every launch; it is a
+  pyfluent event-thread error and does not affect the session (RUN).

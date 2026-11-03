@@ -68,12 +68,11 @@ not needed. See `sw-solidpilot/references/tools-used.md`. The Ansys server's 10
 tools are in `mcp/ansys-tools.json`.
 
 **Skill folders (`skills.external_dirs`).** One folder per agent, plus `_shared`:
-12 skills in total.
-- `brake-lead-run`, `brake-duty-cycle`, `brake-design-review`, `brake-report`,
-  `brake-handoff`
+8 skills in total.
+- `brake-lead-run`, `brake-duty-cycle`, `brake-handoff`
 - `sw-solidpilot`, `sw-rotor-build`, `sw-pads-calliper`
-- `sc-geometry-tagging`
-- `fl-meshing`, `fl-thermal-solve`, `fl-postprocess-energy`
+- `sc-fast-prep` (runs `scripts/stages/spaceclaim_prep.py`)
+- `fl-fast-run` (runs `scripts/stages/fluent_fast.py`)
 
 Check discovery with:
 ```powershell

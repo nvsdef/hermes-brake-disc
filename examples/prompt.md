@@ -1,3 +1,3 @@
-You are the brake program lead in this project (AGENTS.md). Design, build and simulate the FR-330V disc brake assembly defined in specs/PRD.md, delegating SolidWorks, SpaceClaim and Fluent to their specialist subagents one at a time.
+You are the brake program lead in this project (AGENTS.md). Run the FR-330V brake defined in specs/PRD.md with the fast run profile (section 6A): build and assemble it once in SolidWorks, prep it in SpaceClaim, then mesh it and solve the first second of the stop in Fluent, delegating each application to its specialist one at a time.
 Choose the run-id yourself and continue through every gate without waiting for me; stop only if a gate halts or an approval is denied.
-Give me a PDF report with measured performance against every requirement, visuals from every stage, which requirements pass and which don't, and what you would change first.
+No report or images: end with the gate tables, the stage timing table, the heating summary and energy balance, and leave Fluent open on the temperature contour.

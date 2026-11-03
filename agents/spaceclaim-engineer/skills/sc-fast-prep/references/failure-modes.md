@@ -88,7 +88,5 @@ gets at most two repairs (HALT protocol).
 | Symptom | Likely cause | Action |
 |---|---|---|
 | `PermissionError: [Errno 13]` on `brake.pmdb` | the export wrote a folder; the folder was opened as a file (run 1, 13 launches) | Hash the returned inner file. |
-| An image is one colour or under 20 kB | axis limits wrong or no triangles drawn | Check the `.npz` counts; redraw. No SpaceClaim call needed. |
-| matplotlib or pyvista cannot draw | environment | Window capture of your PID with DPI awareness; never relaunch for a picture. |
 | Window capture shows only the top-left part | no `SetProcessDpiAwareness(2)` | Set it before any window query. |
 | `open_file` on the PMDB raises | PMDB reading needs 27.1 | Expected. Fluent's import at Gate 3 is the proof. |

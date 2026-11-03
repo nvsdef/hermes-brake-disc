@@ -106,8 +106,9 @@ centred at **C = (20.722, 94.249)**, trimmed radially to **r = 95 to 165**.
   polar angle **increases** with radius: about **-2.3 to +2.3 deg at r = 95**,
   **+29.8 to +33.4 deg at r = 165**. The other branch (about 153 to 158 deg at
   r = 95) is wrong.
-- Vane k (k = 1 to 20) is vane 1 rotated by **(k - 1) x 18 deg** about Z. Rotate
-  the sketch coordinates, one closed profile per vane. **Do not use a
+- Vane k (k = 1 to 20) is vane 1 rotated by **(k - 1) x 18 deg** about Z: one
+  closed profile per vane, with the rotated coordinates pre-computed in the
+  SolidWorks skill's sketch cards R2 to R5 (never computed by hand in a run). **Do not use a
   circular-pattern feature** (see the SolidWorks skill: it reports 20 and makes 1).
 - Extrude 12 mm **mid-plane** about z = 0 (z = -6 to +6), then trim to the exact
   r = 95 and r = 165 cylinders so the vane ends are true cylindrical faces that sit
@@ -287,7 +288,36 @@ Speed: `omega(t) = omega0 x max(0, 1 - t/ts)`.
 
 ---
 
-## 7. Requirements (every one gets a row in the final report)
+## 6A. Fast run profile (default for a run, amended 2026-11-02)
+
+The user's run is a pipeline demonstration: build and assemble once in
+SolidWorks, prepare in SpaceClaim, mesh and solve a short transient in Fluent,
+and see the model heat up. Section 6 stays the full analysis definition; this
+profile overrides only the rows below. Everything else (materials, loads,
+rotation, convection, the one-sided grey-iron wall layer, the mesh topology
+gates) is unchanged.
+
+| Item | Fast profile | Section 6 full value |
+|---|---|---|
+| Mesh sizes | global 4 to 20 mm, growth 1.2, curvature 18 deg; local cheeks 8, vanes 8, hat 12 mm | 2.2 to 20 mm; 4 / 5 / 8 mm |
+| Simulated time | 0 to 1.0 s (the peak-heating part of the stop) | 0 to 3.540681 s |
+| Time step / iterations | 0.05 s, 3 iterations per step | 0.01 s, 5 iterations per step |
+| Load updates | q''' and omega every 4 steps (interval average); h at t = 0 and mid-run | every 10 / 25 steps |
+| Energy gate | applied within 2 % of the closed-form integral of q''' x d x A_mesh over the simulated time; stored / applied 90 to 110 % | applied within 2 % of E; ratio 90 to 110 % |
+| Heating gate | stored energy, rotor max T and pad max T rise in every window; friction faces above 300 K and below 1500 K | - |
+| Outputs | `results.json`, mesh, case and data; Fluent left open with a temperature contour | plus histories, images, report |
+
+**What the fast profile does not do.** It does not adjudicate THM-01 to THM-04:
+the mesh is too coarse at the friction faces and only the first second of the
+stop is solved. In the fast profile those rows are `NOT RUN (fast profile)`.
+Images, the 2D drawing and the PDF report are descoped.
+
+The vetted stage scripts `scripts/stages/spaceclaim_prep.py` and
+`scripts/stages/fluent_fast.py` implement Gates 2 and 3 of this profile.
+
+---
+
+## 7. Requirements (every one gets a disposition in the lead's gate summary)
 
 M = mandatory, S = should, C = could.
 
@@ -339,24 +369,20 @@ reason for NOT ADJUDICABLE.
 
 ---
 
-## 8. Deliverables
+## 8. Deliverables (fast run profile)
 
 1. `case.json`: the section 5 derivation with every value and unit.
 2. SolidWorks: 9 `.SLDPRT`, `brake.SLDASM`, `brake.step`, and `cad_report.json`
    (each body's measured volume, centroid, bbox and checksum comparison).
 3. SpaceClaim: `brake.pmdb` and `tag_report.json` (27 bodies, named selections,
    areas).
-4. Fluent: mesh, case/data, `mesh_report.json`, `setup_report.json`,
-   `results.json` and time-history CSVs.
-5. Visuals from **every** stage: CAD isometric and a section through the vent
-   inlet at 9 deg, and the named-selection view, rendered by the
-   spaceclaim-engineer from the live SpaceClaim session's tessellation of the
-   imported STEP (the Geometry API has no window screenshot); mesh images, and
-   temperature contours with units, time and range. **No 2D drawings in H1.2**
-   (descoped by the user); the drawing is listed as descoped in the report.
-6. `report.pdf` with the verdict first: every section 7 requirement with measured
-   value, PASS / FAIL / NOT ADJUDICABLE / OPEN / DEFERRED, evidence key, and the
-   **first change you would make** with its quantified expected effect.
+4. Fluent: mesh, case and data, and `results.json` (mesh gate, setup readback,
+   heating history, energy balance). Fluent is left open with a temperature
+   contour so the heating can be seen.
+5. The lead's gate summary in `BUILD_STATE.json` and in chat.
+
+**Descoped in H1.2:** 2D drawings, every image file (CAD views, mesh pictures,
+contour PNGs) and the PDF report.
 
 All run artifacts go in a fresh folder `C:\brake-runs\<run-id>\` (never inside
 OneDrive).
@@ -366,7 +392,8 @@ OneDrive).
 ## 9. Acceptance of the workflow itself
 
 A run is **complete** only if all 28 bodies passed section 4, the 45 interfaces
-exist, the energy audit closed, and every requirement has a disposition. The
+exist, and the energy balance and heating gates of the active profile closed
+(section 6 for a full run, section 6A for a fast run). The
 engineering verdict (how many requirements PASS) is reported separately from
 workflow completion. Otherwise
 it is **complete_with_findings** or **halted**, and the report says exactly which

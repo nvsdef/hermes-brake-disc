@@ -41,13 +41,14 @@ keys, gates). This skill restates their numbers exactly.
 - [ ] Input hashes the child reports equal the hashes you put in its commission.
 - [ ] Common fields present: `run_id`, `prd_revision` = `"H1.2"`,
       `producing_role`, `started_at`, `finished_at`, `status`, `inputs_sha256`.
-- [ ] `timing` block present (`started_at`, `finished_at`, `tool_calls`,
-      `app_launches`); copied into `BUILD_STATE.timing`.
+- [ ] `timing` block present (`started_at`, `finished_at`, `tool_calls` or
+      `seconds`, `app_launches`); copied into `BUILD_STATE.timing`.
 - [ ] Body count and total volume match section 3 within 1 % (0.5 % for the
       calliper drop).
 - [ ] Face-group areas within 2 % **on the right basis**: before imprint at
       Gate 2, after imprint at Gate 3.
-- [ ] 45 contacts (Gate 2) or 45 coupled pairs (Gate 3), with areas within 2 %.
+- [ ] 45 coupled pairs at Gate 3, with the friction contact areas within 2 %
+      (the fast Gate 2 does not measure contacts; Fluent proves them).
 - [ ] Every output file hashed by you; hashes written to `BUILD_STATE.json`.
 
 ## 2. The chain at a glance
@@ -61,23 +62,19 @@ solidworks  10_cad\*.SLDPRT (9), brake.SLDASM (9 comp.) 28 bodies, true global p
                                                         step.manifold_solid_count, hashes, timing
                                                         (FROZEN at Gate 1)
    |
-spaceclaim  20_spaceclaim\cad_iso.png                  full assembly with calliper (before delete)
-            20_spaceclaim\cad_section_9deg.png         GEO-06 section through the vent inlet
-            20_spaceclaim\brake.pmdb\brake.pmdb        FOLDER + inner file: 27 bodies, 29 selections
-            20_spaceclaim\named_selections.png         wall-vent and wall-outer coloured
-            20_spaceclaim\tag_report.json              body map, areas, 45 contacts, timing
+spaceclaim  20_spaceclaim\brake.pmdb\brake.pmdb        FOLDER + inner file: 27 bodies, 29 selections
+(script)    20_spaceclaim\tag_report.json              checks, body map, areas, PMDB hash, timing
    |
-fluent      30_fluent\brake.msh.h5, mesh_report.json   27 solid zones, 45 coupled pairs (internal gate)
-            30_fluent\setup_report.json, results.json  readback, temperatures, energy audit, timing
-            30_fluent\ mesh images, contours, histories\*.csv
+fluent      30_fluent\brake.msh.h5                     coarse mesh (PRD 6A)
+(script)    30_fluent\brake-fast.cas.h5 / .dat.h5      case and data at the end of the heat-up
+            30_fluent\results.json                     mesh gate, readback, history, energy, timing
+            (Fluent left open with a temperature contour on PASS)
    |
-lead        50_report\review.json, review.md           the verdict, deliverables, timing table
-            50_report\report.pdf, manifest.json        verdict first; drawing listed as DESCOPED
+lead        00_lead\gate_log.md, BUILD_STATE.json      gate tables, timing, dispositions
 ```
 
-**No 2D drawings in H1.2.** There is no `40_drawing` folder, no
-`rotor_only.SLDASM`, no Gate 5 and no drawing report. CAD visuals are captured in
-SpaceClaim from the imported STEP at Gate 2.
+**No drawings, images or PDF report in H1.2.** No drawing or report
+folder, no screenshots, no contour PNGs.
 
 **One geometry.** The STEP exported at Gate 1 is the only geometry. SpaceClaim
 removes the calliper from a *simulation copy* and adds names; it never edits a
@@ -126,12 +123,11 @@ geometry: a defect goes back to its owner with the measurement that proves it.
 | named selections | 27 bodies + `wall-vent` + `wall-outer` = 29 | Gate 2 |
 | wall-vent / wall-outer / pad-backing exposed, before imprint | 167 037.60 / 240 205.78 / 42 997.28 mm^2 (each +/- 2 %) | Gate 2 (SpaceClaim) |
 | wall-vent / wall-outer / pad-backing exposed, after imprint | 142 865.51 / 228 477.17 / 31 268.67 mm^2 (each +/- 2 %) | Gate 3 (Fluent mesh) |
-| contacts / coupled pairs | 45: 2 pad/cheek, 2 pad/backing, 40 vane/cheek, 1 hat/cheek_in | Gate 2, Gate 3 |
-| contact areas | 5 864.31 (pad faces), 604.30 (vane), 5 969.03 (hat) mm^2 | Gate 2, Gate 3 |
-| hat/vanes | edge only at r = 95, z = -6: **no** face contact | Gate 2 |
+| coupled pairs | 45: 2 pad/cheek, 2 pad/backing, 40 vane/cheek, 1 hat/cheek_in | Gate 3 |
+| friction contact areas | 5 864.31 mm^2 each | Gate 3 |
+| hat/vanes | edge only at r = 95, z = -6: **no** face contact (no pair) | Gate 3 |
 | solid / fluid zones | 27 / 0 | Gate 3 |
 | rotating zones | `cheek_out`, `cheek_in` only, axis +Z through the origin | Gate 3 |
-| screenshots | `cad_iso.png`, `cad_section_9deg.png`, `named_selections.png`, each > 20 kB | Gate 2 |
 
 ## 5. Axis, frame and direction
 
@@ -156,7 +152,7 @@ the next stage:
    the calliper drop), and the calliper match was unique.
 4. The face-group areas match within 2 % on the right basis, and no contact face
    carries a named selection.
-5. The 45 contacts (Gate 2) or coupled pairs (Gate 3) exist with areas within 2 %.
+5. The 45 coupled pairs exist at Gate 3 with the friction areas within 2 %.
 6. Every JSON artifact carries the common fields with `prd_revision` "H1.2", a
    `timing` block, and units in the key names.
-7. No folder or commission creates a drawing stage; the review lists the drawing as DESCOPED.
+7. No folder or commission creates a drawing, image or report stage.

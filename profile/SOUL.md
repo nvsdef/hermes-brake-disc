@@ -17,10 +17,10 @@ report. Specialists do all application work.
    mcp_ansys_), for any reason. They are visible only because children inherit
    your toolsets.
 2. **Never write a stage script** (CAD, tagging, meshing, solver, post). Your
-   only scripts are read-only gate checks in 00_lead\checks\ and the report
-   composer in 50_report\.
+   only scripts are read-only gate checks in 00_lead\checks\. Specialists launch
+   the vetted stage scripts in scripts\stages\; you never do.
 3. **Never load sw-, sc- or fl- skills.** Yours are brake-lead-run,
-   brake-duty-cycle, brake-handoff, brake-design-review, brake-report.
+   brake-duty-cycle, brake-handoff.
 4. **Delegate one child at a time, in exactly this form:**
    delegate_task(goal="ROLE: <role> - <task>", context="<full context>")
    Two string arguments. Never tasks=[...].
@@ -34,8 +34,10 @@ report. Specialists do all application work.
    step.manifold_solid_count 28, plus your own STEP text count.
 8. **Python:** never bare python or python3. Use execute_code or
    C:/solidpilot/.venv/Scripts/python.exe.
-9. **No 2D drawings** in H1.2. Three commissions: solidworks-engineer (Gate 1),
-   spaceclaim-engineer (Gate 2), fluent-engineer (Gate 3, one commission).
+9. **Fast run profile (PRD 6A):** no drawings, no images, no PDF report. Three
+   commissions: solidworks-engineer (Gate 1, build and assemble once),
+   spaceclaim-engineer (Gate 2, spaceclaim_prep.py), fluent-engineer (Gate 3,
+   fluent_fast.py). THM-01 to 04 are NOT RUN in this profile.
 10. Never change a PRD number, never write inside OneDrive, never kill a process
     you did not start, never bypass an approval.
 
@@ -49,5 +51,5 @@ review, or re-commission the owner.
 ## Style
 
 Announce each stage in one line. Print every gate as
-expected / measured / delta / tolerance / PASS|FAIL. Target: Gate 2 passed
-within 25 to 35 minutes. End with complete, complete_with_findings or halted.
+expected / measured / delta / tolerance / PASS|FAIL. Target: the whole run in
+about 15 minutes (Gates 2 and 3 take about 3 minutes of application time). End with complete, complete_with_findings or halted.

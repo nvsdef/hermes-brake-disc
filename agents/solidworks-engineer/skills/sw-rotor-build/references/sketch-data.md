@@ -43,7 +43,7 @@ four cards go into the **same** sketch, in order R2, R3, R4, R5. Each line of a
 card is one vane: arc about C_k on the R123 flank from r = 80 to r = 172, line
 across the r = 172 end, arc about C_k on the R117 flank back to r = 80, line
 across the r = 80 end. The flanks run past the trim radii on purpose; the ends
-are cut at exactly r = 95 and r = 165 by card R6. No record has a `direction`
+are cut at exactly r = 95 and r = 165 by cards R6a and R6b. No record has a `direction`
 key, so every arc is the minor arc (61.97 deg and 64.27 deg about C_k).
 
 Expected for **each** of the four calls: segment_count 20, arc_center 10,
@@ -93,14 +93,22 @@ line 10.
 ]
 ```
 
-## Card R6 - vane trim (one cut makes both ends)
+## Cards R6a and R6b - vane trim (two cuts)
 
-New sketch on `Front Plane`. Three concentric circles. SolidWorks treats nested
-loops by parity: the ring r = 165 to 260 and the disc r < 95 are the cut
-regions; r = 95 to 165 is kept. Expected: segment_count 3, circle 3.
+The single three-circle cut (the old card R6, relying on nested-loop parity)
+returned `EXTRUSION_FAILED` through SolidPilot on 2026-11-02. Two annular cuts
+are the method. Each is a new sketch on `Front Plane` with two concentric
+circles (expected: segment_count 2, circle 2), cut with `depth=0.020`,
+`mid_plane=true`.
 
+Card R6a, outer ring r = 165 to 260:
 ```json
-[{"entity_type":"circle","cx":0,"cy":0,"radius":0.260000000},{"entity_type":"circle","cx":0,"cy":0,"radius":0.165000000},{"entity_type":"circle","cx":0,"cy":0,"radius":0.095000000}]
+[{"entity_type":"circle","cx":0,"cy":0,"radius":0.260000000},{"entity_type":"circle","cx":0,"cy":0,"radius":0.165000000}]
+```
+
+Card R6b, inner disc r = 10 to 95 (the 10 mm hole only keeps the profile an annulus):
+```json
+[{"entity_type":"circle","cx":0,"cy":0,"radius":0.095000000},{"entity_type":"circle","cx":0,"cy":0,"radius":0.010000000}]
 ```
 
 ### Vanes checksum table
@@ -108,13 +116,12 @@ regions; r = 95 to 165 is kept. Expected: segment_count 3, circle 3.
 | After | Call | Expected total volume m^3 | Bodies |
 |---|---|---|---|
 | boss of cards R2 to R5, `depth=0.012`, `mid_plane=true` | `extrude_feature` | 1.901692e-4 (792.372 mm^2 x 12 mm x 20) | 20 |
-| cut of card R6, `depth=0.020`, `mid_plane=true` | `extrude_feature(feature_type='cut')` | **1.450325e-4** (604.302 mm^2 x 12 mm x 20) | 20 |
+| cut of card R6a | `extrude_feature(feature_type='cut')` | 1.723384e-4 | 20 |
+| cut of card R6b | `extrude_feature(feature_type='cut')` | **1.450325e-4** (604.302 mm^2 x 12 mm x 20) | 20 |
 
-If the cut returns about 1.723384e-4, only the outer ring was cut (the parity
-rule did not apply). Fallback: delete the cut, then cut r = 0.165 / 0.260
-(expect 1.723384e-4) and r = 0.010 / 0.095 (expect 1.450325e-4) as two
-sketches. If it returns about 1.901692e-4 minus a small amount, only the inner
-disc was cut: same fallback.
+`extrude_feature` returns `result_geometry.volume` to only 2 to 3 significant
+figures: treat it as a sanity check. The binding check is
+`analyze_model('bodies')` after the last cut.
 
 Per vane: 7.251627e-6 m^3; centroid r = 130.154 mm at 17.917 + (k - 1) x 18 deg,
 z = 0. The full naming table is in `references/vane-geometry.md` section 6.

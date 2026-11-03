@@ -37,9 +37,9 @@ log it points to while the child is running.
 
 ## 2. The timing block
 
-Every stage report (`cad_report.json`, `tag_report.json`, `mesh_report.json`,
-`results.json`) carries `timing`: `started_at`, `finished_at`, `tool_calls`
-(approximate) and `app_launches` (SolidWorks documents opened, SpaceClaim or
+Every stage report (`cad_report.json`, `tag_report.json`, `results.json`)
+carries `timing`: `started_at`, `finished_at`, `tool_calls` (agent stage) or
+`seconds` and `phase_seconds` (stage scripts), and `app_launches` (SolidWorks documents opened, SpaceClaim or
 Fluent sessions started). Copy it verbatim into `BUILD_STATE.timing.<gate>` and
 add your own fields:
 
@@ -70,16 +70,16 @@ add your own fields:
 - `minutes_to_gate2_pass` is measured from `run_started_at`. The target is 25 to
   35 min. Exceeding it is a finding, not a failure.
 
-Brake-report prints the per-stage table from this block (stage, owner, minutes,
+The Gate 4 summary prints the per-stage table from this block (stage, owner, minutes,
 tool calls, app launches, repairs).
 
 ## 3. Final status rules (PRD section 9)
 
 | Status | When |
 |---|---|
-| `complete` | all 28 bodies passed PRD section 4, the 45 interfaces exist, the energy audit closed (90 to 110 %, and applied within +/-2 %), and every requirement has a disposition |
-| `complete_with_findings` | the chain reached Gate 4 but at least one of the above is not met, or a required figure is missing |
-| `halted` | a gate failed after two repairs, delegation was refused or the budget ran out, an approval was denied, or preflight failed. The report (or, if no report, the final message) names the gate and gives expected and measured |
+| `complete` | all 28 bodies passed PRD section 4, the 45 interfaces exist, the Gate 3 energy and heating gates closed (stored/applied 90 to 110 %, applied within 2 % of the closed form), and every requirement has a disposition |
+| `complete_with_findings` | the chain reached Gate 4 but at least one of the above is not met |
+| `halted` | a gate failed after two repairs, delegation was refused or the budget ran out, an approval was denied, or preflight failed. The final message names the gate and gives expected and measured |
 
 The missing 2D drawing is **descoped** (PRD H1.2 section 8) and never lowers the
 status.

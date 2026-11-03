@@ -109,8 +109,8 @@ Checks on the extended profile:
   64.27 deg. Both are minor arcs, so `arc_center` without `direction` draws the
   right one.
 - Extended area per vane: 792.372 mm^2. After the boss (12 mm, 20 vanes):
-  1.901692e-4 m^3. After the single trim cut of card R6 (both ends at once):
-  1.450325e-4 m^3. If only the outer ring is cut: 1.723384e-4 m^3.
+  1.901692e-4 m^3. After trim card R6a (outer ring): 1.723384e-4 m^3; after
+  R6b (inner disc): 1.450325e-4 m^3.
 - Smallest gap between neighbouring extended profiles: 15.07 mm.
 
 ## 5. All 20 extended profiles (metres, 9 decimals)
@@ -197,8 +197,9 @@ to 99.75 and vane_10 at 131.06 to 139.39. So a 0 deg section shows the vent inle
 A plane at 9 deg (and 189 deg) passes mid-passage at r = 95 on both sides, and
 crosses vane_01 and vane_11 at r = 110.16 to 119.21 mm and vane_20 and vane_10 at
 r = 151.41 to 159.07 mm. That is the section that shows GEO-06 (inlet open).
-SpaceClaim takes that section screenshot at Gate 2 (`cad_section_9deg.png`);
-there are no SolidWorks drawings in H1.2.
+GEO-06 is evidenced in `cad_report.json` from measured geometry (hat wall
+r <= 88 in z = -6 to +6 against the cheek bore r = 95: a 7 mm open inlet); there
+are no drawings or section images in H1.2.
 
 ## 8. Handedness
 

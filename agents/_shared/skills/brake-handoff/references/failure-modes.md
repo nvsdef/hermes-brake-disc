@@ -28,5 +28,4 @@ PRD's geometry. Most of them **reported success while being wrong**.
 | energy ratio far below 90 % | a non-axisymmetric zone (vanes or hat) was rotated; the predecessor lost 92 % of the energy this way | fluent-engineer | rotate only `cheek_out` and `cheek_in`; read the list back |
 | pad and rotor temperatures look swapped | interface side inferred from a name | fluent-engineer | identify side by cp and k of the adjacent cell zone |
 | a solver boundary named `...inlet...` behaves as a flow inlet | reserved substring in a name | spaceclaim-engineer | rename without `inlet`, `outlet`, `symmetry` |
-| a CAD screenshot shows holes or a shape that is not in `brake.step` | a second model was built or the wrong file was imported | solidworks-engineer / spaceclaim-engineer | Gate 2 failure; every visual is of the frozen STEP |
 | frozen CAD hash changed after Gate 1 | a part or the assembly was saved during a later stage | whoever saved it | Gate failure; restore or halt |

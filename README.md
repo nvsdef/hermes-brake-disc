@@ -3,13 +3,17 @@
 A fictional brake-disc engineering demo. One Hermes **lead** delegates to three
 specialist subagents, one per application:
 
-1. **solidworks-engineer** builds 9 parts (28 bodies) in SolidWorks through
-   the SolidPilot MCP.
-2. **spaceclaim-engineer** tags the geometry, captures the CAD views and exports a PMDB.
-3. **fluent-engineer** meshes the model and solves a transient braking stop in
-   Fluent.
+1. **solidworks-engineer** builds and assembles 9 parts (28 bodies) once in
+   SolidWorks through the SolidPilot MCP.
+2. **spaceclaim-engineer** runs `scripts/stages/spaceclaim_prep.py`: deletes the
+   calliper, names bodies and faces, exports a PMDB (about 1 min).
+3. **fluent-engineer** runs `scripts/stages/fluent_fast.py`: coarse mesh and the
+   first second of the braking stop, leaving Fluent open on the temperature
+   contour (about 2 min).
 
-The lead reviews every gate against measured numbers and writes the report.
+The lead derives the duty cycle, checks every gate against measured numbers and
+ends with a gate summary. No report and no images (PRD section 6A, fast run
+profile).
 
 **Status (revision H1.2, 2026-11-02):**
 - `specs/PRD.md` is the single authority, with independently computed checksums
@@ -35,6 +39,7 @@ The lead reviews every gate against measured numbers and writes the report.
 | `profile/SOUL.md` | The lead's profile SOUL (system prompt; survives compaction). |
 | `profile/environment.json` | Pinned versions, paths and tool counts that preflight checks. |
 | `mcp/*-tools.json` | Tool inventories (names and argument schemas) of the SolidPilot (46) and Ansys (10) servers. |
+| `scripts/stages/*.py` | The two vetted stage scripts (SpaceClaim prep, Fluent mesh + heat-up), launched by their specialist. |
 | `scripts/install_profile.ps1` | Renders the profile for this workstation. |
 | `scripts/preflight.ps1` | Read-only machine check: PASS/WARN/FAIL per item. |
 | `scripts/publish_github.ps1` | Pushes to a private GitHub repo after safety checks. |

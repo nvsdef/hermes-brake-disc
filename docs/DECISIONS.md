@@ -80,3 +80,37 @@ as in H1.2.
     SolidPilot tool outside the 17-tool include filter is mentioned only as a
     tool not to call, and every Ansys tool named in a skill exists.
 
+
+## H1.2 fast run profile (2026-11-02) - "build once, prep, mesh, heat up"
+
+Run 2 (FR330V-20261102-0936) passed Gates 0 to 2 with agents composing every
+call (Gate 1 13 min, Gate 2 18 min) and was cut off in Gate 3 setup after 30 min.
+Fluent alone needed about 25 min at the section 6 numerics. The user asked for
+an end-to-end run of about 10 minutes, no report, no images.
+
+37. **Fast run profile is the default** (PRD section 6A): coarse mesh (4 to 20 mm;
+    cheeks 8, vanes 8, hat 12 mm), first 1.0 s of the stop, dt 0.05 s, 3
+    iterations per step. THM-01 to THM-04 are `NOT RUN (fast profile)`. Section 6
+    stays the full analysis definition.
+38. **Vetted stage scripts for Gates 2 and 3** (`scripts/stages/`), built from
+    the code that passed run 2. The specialist launches one, judges its JSON,
+    and routes failures; it never rewrites the script mid-run. This reverses
+    rule 1 of `docs/SKILL_STYLE.md` ("guidance, not automation") for these two
+    stages only; Gate 1 stays agentic through SolidPilot. Measured: Gate 2 62 s
+    (was 18 min), Gate 3 126 s.
+39. **SpaceClaim face tagging by geometric rule** (surface type, plane z, radius)
+    replaces the sampled contact graph. It reproduced the run-2 areas to 0.00 %.
+    The 45 contacts are now proven once, by Fluent's coupled-pair count.
+40. **Images, the PDF report and the design-review stage are descoped.** Skills
+    `brake-report`, `brake-design-review`, `sc-geometry-tagging`, `fl-meshing`,
+    `fl-thermal-solve` and `fl-postprocess-energy` were removed (they remain in
+    commit f4d8f2f). Their API sheets and failure tables moved to the new skills'
+    `references/`. The only visual is the live Fluent contour left on screen.
+41. **No STEP re-import in SolidWorks** (old step A8): about 22 calls in run 2
+    for evidence that the per-part reads and SpaceClaim's import already give.
+42. **Vane trim is two cuts** (cards R6a, R6b): the three-circle parity cut
+    returned `EXTRUSION_FAILED` through SolidPilot in run 2.
+43. **Heating gate, not monotonic face temperature.** The friction-face peak
+    comes at about 0.2 s and eases as the power ramps down; the gate requires
+    stored energy and the bulk rotor and pad maxima to rise in every window,
+    and stored / applied within 90 to 110 % (measured 99.6 %).

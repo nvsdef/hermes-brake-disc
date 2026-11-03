@@ -12,7 +12,7 @@ a coupled wall with a thickness as a thin conducting layer between the two
 adjacent cells, and the heat generation rate you set is a volumetric rate inside
 that layer. The heat per unit area it delivers is `q''' x d`.
 
-What you must record in `setup_report.json.wall_layer`:
+What you must record in `results.json` (`layer_material_readback`):
 
 | Item | Why |
 |---|---|
@@ -69,7 +69,7 @@ material is a FAIL; so is `aluminum`.
 If none answers, say so **once**, with the wall list, and let the run stand on
 two independent pieces of evidence instead: the pre-solve applied-energy integral
 (step 9 of the skill) and the per-interval energy check in
-`fl-postprocess-energy`. A blind readback is not a passing readback.
+the energy gate in `results.json`. A blind readback is not a passing readback.
 
 Some settings return scalars as `{"option": "value", "value": x}` or as
 `[value, unit]`. Unwrap carefully. A readback that returns a dict you did not
@@ -91,9 +91,9 @@ Identify which zone of each pair is the pad side by measurement: area-average
 
 | Group | Zones | h_ref, W/(m^2 K) | Area check |
 |---|---|---|---|
-| vent | every expanded `wall-vent*` zone (about 22) | 130 | 142 865.51 mm^2, and equal to `mesh_report.json` within 0.1 % |
-| outer | every expanded `wall-outer*` zone (about 3) | 85 | equal to `mesh_report.json` within 0.1 % |
-| pad/backing | every wall that is neither a named-selection zone nor part of a coupled pair | 40 | equal to `mesh_report.json` within 0.1 % |
+| vent | every expanded `wall-vent*` zone (about 22) | 130 | 142 865.51 mm^2, and equal to the meshed group area within 0.1 % |
+| outer | every expanded `wall-outer*` zone (about 3) | 85 | equal to the meshed group area within 0.1 % |
+| pad/backing | every wall that is neither a named-selection zone nor part of a coupled pair | 40 | equal to the meshed group area within 0.1 % |
 
 Build the pad/backing list **by subtraction**: all walls, minus the vent and
 outer lists, minus every coupled wall (primary and shadow). Auto-named leftovers
@@ -122,12 +122,12 @@ back.
 
 Read back `thermal_bc`, `heat_transfer_coeff` and `free_stream_temp` on every
 convection wall at the first h block and at one later block. Store per wall in
-`setup_report.json.convection`: group, h schedule, T_inf readback, area.
+`results.json.convection_walls`: group, h schedule, T_inf readback, area.
 
 ## Why these h values are inputs, not results
 
 There is no air domain. The three h_ref values are prescribed assumptions
 (PRD section 6), scaled with speed by an exponent of 0.8. The vent value of 130
 presumes vanes that pump air; its basis depends on the rotation sign. Report
-them as inputs in `setup_report.json`. They are the largest modelling assumption
+them as inputs in `results.json`. They are the largest modelling assumption
 in the case, and nobody in this workflow computes them.

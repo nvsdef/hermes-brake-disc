@@ -1,12 +1,12 @@
-# Commission templates - goal and context for every child (PRD H1.2)
+# Commission templates - goal and context for every child (PRD H1.2, fast run profile)
 
 There are **three** commissions and one repair template:
 
 | Template | Role | Gate | Stage folder |
 |---|---|---|---|
 | B1 | solidworks-engineer | Gate 1 CAD | `10_cad` |
-| B2 | spaceclaim-engineer | Gate 2 geometry prep + CAD screenshots | `20_spaceclaim` |
-| B3 | fluent-engineer | Gate 3 mesh + setup + solve + post (one commission) | `30_fluent` |
+| B2 | spaceclaim-engineer | Gate 2 SpaceClaim prep (runs `spaceclaim_prep.py`) | `20_spaceclaim` |
+| B3 | fluent-engineer | Gate 3 mesh + heat-up solve (runs `fluent_fast.py`) | `30_fluent` |
 | B4 | the owner of the defect | repair of any gate | the owner's folder |
 
 There is no drawing commission in H1.2.
@@ -86,21 +86,24 @@ Project root: <PROJECT>
 Run id:       <RUN_ID>   (prd_revision "H1.2")
 Run folder:   <RUN>      (write ONLY inside <RUN>\<STAGE_FOLDER>\; never inside OneDrive)
 
-TOOLS: use the native MCP tools (servers solidpilot and ansys; names are
-prefixed mcp_solidpilot_ / mcp_ansys_ or mcp__solidpilot__ / mcp__ansys__; match
-on the bare tool name). Do not use scripts\mcp_client.py unless this context
+TOOLS: use the native MCP tools (servers solidpilot and ansys - named
+ansys-agent in Claude; names are prefixed mcp_solidpilot_ / mcp_ansys_ or
+mcp__solidpilot__ / mcp__ansys-agent__; match on the bare tool name; in Claude
+load deferred tool schemas with ToolSearch first). Do not use scripts\mcp_client.py unless this context
 says native MCP is unavailable. Pass an explicit absolute path for every file
 you write, and cwd=<RUN>\<STAGE_FOLDER> to submit_ansys_job. You cannot call
 delegate_task, clarify, memory, send_message or cronjob. If you need a decision,
 stop and put the question in open_questions.
 
-PYTHON: never type bare python or python3 in the terminal (it opens a Windows
-Store installer). Use the execute_code tool if you have it, otherwise
-C:/solidpilot/.venv/Scripts/python.exe.
+PYTHON: never type bare python or python3 in a Windows terminal (it opens a
+Windows Store installer). Use the execute_code tool if you have it, otherwise
+C:/solidpilot/.venv/Scripts/python.exe, or a Linux sandbox python3 that mounts
+C:\brake-runs (hashes, JSON checks, STEP text counts).
 
-APPLICATION SESSIONS: start your application once for the stage and keep it
-alive; connect to it with short scripts or calls. Never launch SpaceClaim or
-Fluent just to test one call. Count every launch.
+APPLICATION SESSIONS: SolidWorks is driven call by call and kept alive.
+SpaceClaim and Fluent are driven by ONE run of the stage's vetted script
+(scripts/stages/); never write your own replacement, never launch them to test
+a call. Count every launch.
 
 HALT RULE: after every body or step, measure and print
 expected / measured / delta / tolerance / PASS|FAIL in the same step. On a FAIL,
@@ -245,8 +248,10 @@ OUTPUT CONTRACT (specs/handoffs.md Gate 1), all in <RUN>\10_cad\
   timing (preamble A)
 
 DO NOT
-- make any drawing, drawing view, rotor_only assembly or render (H1.2 has no
-  2D drawings; CAD screenshots are taken in SpaceClaim at Gate 2)
+- make any drawing, drawing view, rotor_only assembly, render or image (H1.2
+  has no drawings and no images)
+- re-open brake.step in SolidWorks (no re-import: SpaceClaim re-measures all 28
+  bodies at Gate 2)
 - build cross-drilled holes (GEO-05 is deferred) or any second/display model
 - trust volume alone: check centroid and bbox for every body
 - use submit_feature_graph for placement (it ignores every placement key while
@@ -256,197 +261,86 @@ DO NOT
 
 ---
 
-## B2. Gate 2 - spaceclaim-engineer - geometry prep and CAD screenshots
+## B2. Gate 2 - spaceclaim-engineer - SpaceClaim prep (stage script)
 
 **goal**
 
 ```
-ROLE: spaceclaim-engineer - Gate 2 geometry preparation for run <RUN_ID>. In ONE
-SpaceClaim session: import the frozen brake.step, identify all 28 bodies by
-measured signature, capture cad_iso.png and cad_section_9deg.png, delete the
-calliper, name 27 bodies plus wall-vent and wall-outer, capture
-named_selections.png, export brake.pmdb and write tag_report.json to
-<RUN>\20_spaceclaim\. Child <N> of <BUDGET>.
+ROLE: spaceclaim-engineer - Gate 2 for run <RUN_ID>. Run the vetted stage script
+scripts/stages/spaceclaim_prep.py once on the frozen brake.step (import, identify
+28 bodies, delete the calliper, name 27 bodies plus wall-vent and wall-outer,
+export brake.pmdb), then judge <RUN>\20_spaceclaim\tag_report.json against the
+gates. Child <N> of <BUDGET>.
 ```
 
 **context** = preamble A with `<ROLE>` = `spaceclaim-engineer`, `<SKILL LIST>` =
-`sc-geometry-tagging`, `<SECTIONS>` = `2 to 4 and 6`, `<GATE>` = `Gate 2`,
-`<STAGE_FOLDER>` = `20_spaceclaim`, then:
+`sc-fast-prep`, `<SECTIONS>` = `2 to 4`, `<GATE>` = `Gate 2`, `<STAGE_FOLDER>` =
+`20_spaceclaim`, then:
 
 ```
 INPUTS (frozen at Gate 1; refuse to proceed if a hash differs)
 - <RUN>\10_cad\brake.step        sha256 <sha:brake.step>
-    (lead-verified: 28 MANIFOLD_SOLID_BREP, assembly 9 components)
+    (lead-verified: 28 MANIFOLD_SOLID_BREP, 10 PRODUCT, assembly 9 components)
 - <RUN>\10_cad\cad_report.json   sha256 <sha:cad_report.json>
-Use the MEASURED signatures in cad_report.json bodies[] (volume, centroid, bbox)
-to identify bodies. The calliper signature to match is the measured one:
-  calliper volume <cad_report calliper volume_m3> m^3, centroid <...> mm
-  (PRD value 6.170815e-4 m^3, centroid (146.143, 0.000, +0.369) mm, bbox x max
-  200.0 mm). Never use the predecessor's 6.113e-4 m^3 signature.
 
-SESSION: one SpaceClaim launch job (submit_ansys_job, cwd=<RUN>\20_spaceclaim)
-kept alive for the whole stage; short scripts connect to it. Record the PID and
-the number of connect calls in tag_report.json -> session. Close it when done.
+LAUNCH (once) with submit_ansys_job, cwd=<RUN>\20_spaceclaim, job_name g2_sc_prep,
+script_text exactly:
+  import os, runpy
+  os.environ["BRAKE_RUN"] = r"<RUN>"
+  runpy.run_path(r"<PROJECT>\scripts\stages\spaceclaim_prep.py", run_name="__main__")
+Poll job_status(job_id, wait_seconds=55). Expected about 60 to 120 s.
+Do not edit, copy or replace the script. If it reports BLOCKED, return the PIDs.
 
-ORDER OF WORK
-1. Import; import_scale_check; body_map (28).
-2. SCREENSHOTS BEFORE DELETION, framed on the model:
-   cad_iso.png - isometric of the full assembly INCLUDING the calliper.
-   cad_section_9deg.png - section through the vent inlet on a plane at 9 deg
-   (mid-passage between vanes): GEO-06 evidence, showing the hat web on the
-   inboard cheek and the open inlet of about 7 mm. A 0 deg cut passes through
-   vane roots and makes the inlet look blocked.
-3. calliper_match (unique), delete, after_delete (27, re-read design).
-4. Named selections, areas, contact_graph.
-5. named_selections.png - wall-vent and wall-outer in distinct colours, framed.
-6. Export brake.pmdb, hash, write tag_report.json.
-
-GATE NUMBERS YOU WILL BE CHECKED AGAINST
-- import_scale_check: rotor OD 330 mm (r = 165), z extents -57 to +57 mm, total
-  volume of 28 bodies 2 647 566.01 mm^3, rotor 23 bodies 1.801777e-3 m^3.
-  Tolerance 1 %. Do NOT scale the import: if 25.4x or 1000x off, stop.
-- body_map: 28 bodies, each matched to exactly one PRD name by measured volume
-  and centroid. If fewer than 28 arrive, STOP and return the count: the owner
-  is solidworks-engineer. Do not repair CAD.
-- calliper_match: exactly one body matches (volume AND centroid z = +0.369 AND
-  bbox x max = 200.0); report the runner-up and its distance.
-- after_delete: 27 bodies on a RE-READ design. Volume drop equals the calliper
-  volume within 0.5 %. Expected 27-body total 2 030 484.53 mm^3.
-  set_suppressed() is not deletion.
-- named_selections: 27 body selections named exactly cheek_out, cheek_in, hat,
-  vane_01 to vane_20 (same angular order as cad_report.json), outerpad, innerpad,
-  bp_outer, bp_inner; plus wall-vent and wall-outer.
-  wall-vent = 2 cheek inner faces (z = +6 and z = -6) + 20 vane flanks and
-  radial ends. BEFORE-IMPRINT area 167 037.60 mm^2 +/- 2 %.
-  wall-outer = every other exposed rotor and hat face, including the hat step
-  face z = -6, r = 88 to 95: 240 205.78 mm^2 +/- 2 % before imprint.
-  Pad and backing exposed faces (no named selection): 42 997.28 mm^2 +/- 2 %.
-  Also report the predicted after-imprint values for Gate 3: wall-vent
-  142 865.51, wall-outer 228 477.17, pad/backing 31 268.67 mm^2.
-- NEVER tag a contact face (pad/cheek, pad/backing, vane/cheek, hat/cheek_in):
-  a named selection turns a coupled interface into an uncoupled wall.
-- contact_graph: 45 contacts, each with measured area:
-    outerpad/cheek_out, innerpad/cheek_in           5 864.31 mm^2 each
-    outerpad/bp_outer, innerpad/bp_inner            5 864.31 mm^2 each
-    vane_k/cheek_out and vane_k/cheek_in (40)       604.30 mm^2 each
-    hat/cheek_in (cylinder r = 95, z -16 to -6)     5 969.03 mm^2
-    hat/vanes: edge only, NO face contact (report it, do not count it)
-
-PMDB NOTE: the export creates a FOLDER <RUN>\20_spaceclaim\brake.pmdb\ that
-contains the file brake.pmdb. Hash the INNER file
-(<RUN>\20_spaceclaim\brake.pmdb\brake.pmdb). Opening the folder as a file gives
-PermissionError [Errno 13]. PMDB cannot be re-opened by pyansys-geometry on
-2026 R1; Fluent's import at Gate 3 is the proof.
-
-OUTPUT CONTRACT (specs/handoffs.md Gate 2), in <RUN>\20_spaceclaim\
-- brake.pmdb\brake.pmdb
-- tag_report.json with step_sha256, session, import_scale_check, body_map,
-  calliper_match, after_delete, named_selections (before-imprint areas and
-  predicted values), contact_graph, pmdb_sha256 (inner file), screenshots
-  (three paths), job ids, timing
-- cad_iso.png, cad_section_9deg.png, named_selections.png (each framed, > 20 kB)
+JUDGE <RUN>\20_spaceclaim\tag_report.json yourself (not the log): status PASS,
+every checks[] row passes, inputs_sha256 equal the two hashes above, 29 named
+selections, before-imprint areas within 2 % (wall-vent 167 037.60, wall-outer
+240 205.78, pad/backing 42 997.28 mm^2), your own SHA-256 of
+brake.pmdb\brake.pmdb equals pmdb.sha256, spaceclaim_left_running false.
+Print every check as expected / measured / delta / tolerance / PASS|FAIL.
 ```
 
 ---
 
-## B3. Gate 3 - fluent-engineer - mesh, setup, solve and post (one commission)
+## B3. Gate 3 - fluent-engineer - mesh + heat-up solve (stage script)
 
 **goal**
 
 ```
-ROLE: fluent-engineer - Gate 3 for run <RUN_ID>. In ONE Fluent session: mesh the
-frozen brake.pmdb as 27 solid zones with shared topology, run the internal mesh
-gate (stop without solving if it fails), then set up transient solid conduction
-per case.json, read the setup back, solve the full stop ts = 3.540681 s, and
-post-process temperatures, histories, contours and the energy audit into
-<RUN>\30_fluent\. Child <N> of <BUDGET>.
+ROLE: fluent-engineer - Gate 3 for run <RUN_ID>. Run the vetted stage script
+scripts/stages/fluent_fast.py once on the frozen brake.pmdb (coarse mesh, mesh
+gate, PRD setup from case.json, first 1.0 s of the stop), then judge
+<RUN>\30_fluent\results.json. Fluent stays open with the temperature contour on
+PASS. Child <N> of <BUDGET>.
 ```
 
 **context** = preamble A with `<ROLE>` = `fluent-engineer`, `<SKILL LIST>` =
-`fl-meshing, fl-thermal-solve, fl-postprocess-energy`, `<SECTIONS>` = `4 to 7`,
-`<GATE>` = `Gate 3`, `<STAGE_FOLDER>` = `30_fluent`, then:
+`fl-fast-run`, `<SECTIONS>` = `4 to 6A`, `<GATE>` = `Gate 3`, `<STAGE_FOLDER>` =
+`30_fluent`, then:
 
 ```
 INPUTS (frozen; refuse if a hash differs)
 - <RUN>\20_spaceclaim\brake.pmdb\brake.pmdb   sha256 <sha:pmdb inner file>
-    (brake.pmdb is a FOLDER; import the inner file)
-- <RUN>\20_spaceclaim\tag_report.json         sha256 <sha:tag_report.json>
-- <RUN>\10_cad\cad_report.json                sha256 <sha:cad_report.json>
 - <RUN>\00_lead\case.json                     sha256 <sha:case.json>
-Mesh from the PMDB only. Never from brake.step: STEP carries no face names and
-the solve would run flat at 300 K with no error.
 
-SESSION: one Fluent launch (meshing mode), switched to the solver in the same
-process. A second launch only if Fluent died or connect-to-existing was
-refused, with relaunch_reason recorded; never a third. Close it before returning.
+LAUNCH (once) with submit_ansys_job, cwd=<RUN>\30_fluent, job_name g3_fluent_fast,
+script_text exactly:
+  import os, runpy
+  os.environ["BRAKE_RUN"] = r"<RUN>"
+  runpy.run_path(r"<PROJECT>\scripts\stages\fluent_fast.py", run_name="__main__")
+(Fast profile defaults, PRD section 6A. Add FAST_* overrides only if this
+commission lists them: <none>.)
+Poll job_status(job_id, wait_seconds=55). Expected about 2 to 3 min. A
+"ValueError: invalid literal for int()" traceback in stderr is a harmless
+pyfluent event-thread error. Do not edit, copy or replace the script.
 
-PART 1 - MESH (PRD section 6; recipe is a starting point, not evidence)
-Global size 2.2 to 20 mm, growth 1.2, curvature angle 18 deg. Local sizes:
-cheeks 4 mm, vanes 5 mm, hat 8 mm. Poly-hexcore, no inflation, shared topology,
-all regions solid.
-
-INTERNAL MESH GATE (fail-closed). Write mesh_report.json, then print this table:
-- 27 solid cell zones, 0 fluid zones. Zone map: Fluent name -> PRD name.
-- 45 coupled pairs: 2 cheek/pad, 2 pad/backing, 40 cheek/vane, 1 hat/cheek_in;
-  areas 5 864.31, 5 864.31, 604.30, 5 969.03 mm^2, each within 2 %.
-- max SURFACE skewness <= 0.90; min orthogonal quality >= 0.10; 0 negative
-  volumes. Volumetric skewness null with reason "not reported by Fluent 2026 R1".
-- per-zone volume within 2 % of PRD section 4 (cheeks 5.717699e-4, each vane
-  7.251627e-6, hat 5.132043e-4, pads 7.037168e-5, backing 4.398230e-5 m^3).
-- cells + nodes < 512 000 if the licence is Ansys Student (state which).
-- AFTER-imprint areas within 2 %: wall-vent 142 865.51, wall-outer 228 477.17,
-  pad/backing exposed 31 268.67 mm^2. Sum every per-body piece.
-- wall-normal and in-plane cell size at BOTH friction faces (pad side, cheek
-  side); compare with penetration depths 1.374 mm (pad) and 7.564 mm (iron).
-  Recorded, not gated.
-If any gated row fails after two repairs, STOP: do not set up or solve. Return
-status FAIL with mesh_report.json and the failing numbers.
-Write mesh images: full view and vent close-up (framed, readable).
-
-PART 2 - SETUP (PRD sections 5 and 6; all values are in case.json)
-- Energy on, flow off, double precision, transient. Initial and ambient 300 K.
-- Materials: MAT-01 iron rho 7200, cp 447, k 52 on cheek_out, cheek_in,
-  vane_01..20, hat. MAT-02 pad rho 2500, cp 900, k 1.2 on outerpad, innerpad.
-  MAT-03 steel rho 8030, cp 502, k 16.3 on bp_outer, bp_inner.
-- Heat source: virtual wall layer d = 0.002 m on ONE side only of each of the two
-  pad/cheek contacts. Layer material grey iron (MAT-01 values), never Fluent's
-  default aluminium; read it back.
-  q'''(t) = 5.8529e9 x (1 - t/ts) W/m^3 for 0 <= t <= ts, then 0, scaled with
-  the closed-form A = 5.864306e-3 m^2. The applied-energy integral with the
-  MEASURED mesh contact areas must equal 243 055.6 J within 2 %.
-- Rotation: solid motion on cheek_out and cheek_in ONLY, axis +Z through the
-  origin, omega(t) = -84.1751 x max(0, 1 - t/ts) rad/s. Never rotate vanes or hat.
-- Convection: wall-vent h_ref 130, wall-outer h_ref 85, exposed pad and backing
-  h_ref 40 W/(m^2 K), T_inf 300 K, omega_ref 56.1167 rad/s:
-  h(t) = max(7, h_ref x (abs(omega(t)) / 56.1167)^0.8). At t = 0: 179.81,
-  117.57, 55.33. Resolve split named selections to every piece.
-- Time: dt = 0.01 s, 354 full steps plus one final step of 0.000681 s to reach
-  t = 3.540681 s. Update q''' and omega at least every 10 steps and h at least
-  every 25 (exact interval average). Energy residual 1e-8 each step.
-READBACK BEFORE SOLVING -> setup_report.json (materials per zone, motion list =
-exactly the two cheeks, h schedules and resolved areas, layer side and material,
-dt and step count, pre-solve applied-energy integral, tangential-velocity check
-<= 1.592987e-4 m^3/s per rad/s). Fix a wrong readback before solving; two tries.
-
-PART 3 - SOLVE AND POST
-- Solve to t = 3.540681 s including the short step.
-- results.json (schema in fl-postprocess-energy): peaks[] with
-  rotor_friction_cell_max, rotor_friction_wall_layer_max, pad_friction_cell_max,
-  pad_friction_wall_layer_max, rotor_all_cell_max, rotor_all_surface_max (each
-  peak_k, peak_time_s, end_of_stop_k); requirements_data THM-01 to THM-04;
-  rotor_bulk_rise_k; energy_audit {E_applied_j, E_stored_j, E_conv_j, ratio_pct,
-  residual_j, E_applied_over_vehicle_pct}; coverage.covers_full_stop; mesh_sha256;
-  timing.
-- histories\*.csv (time s, temperature K, one row per step, ending 3.540681).
-- contours: rotor and pad friction faces at the time of peak and at end of stop,
-  legend in K, time and range printed on the image.
-GATE: E_applied within 2 % of 243 055.6 J; (E_stored + E_conv) / E_applied 90 to
-110 %; full ts covered; nothing clipped at a solver temperature limit.
-
-OUTPUT CONTRACT (specs/handoffs.md Gate 3), in <RUN>\30_fluent\
-brake.msh.h5, mesh_report.json (with timing), mesh images, case and data files,
-setup_report.json, results.json (with timing covering the whole commission),
-histories\*.csv, contour images.
+JUDGE <RUN>\30_fluent\results.json yourself: status PASS, every checks[] row
+passes (27 solid / 0 fluid zones, 45 coupled pairs, friction areas 5 864.31 mm^2
+within 2 %, meshed volume 2 030 484.53 mm^3 within 2 %, materials and grey-iron
+layer read back, applied energy within 2 % of the closed form, stored/applied
+90 to 110 %, stored energy and bulk maxima rising every window), inputs_sha256
+equal the hashes above, history ends at settings.end_time_s, live_contour
+displayed. Report the summary block (peak and final friction-face temperatures,
+applied and stored energy). This is a heating demonstration, not a THM verdict.
 ```
 
 ---
@@ -485,7 +379,7 @@ SCOPE
   are <hashes> and must be unchanged when you finish (check them).
 - After the repair, RE-MEASURE everything the gate checks (not only the repaired
   item) and RE-EXPORT <brake.step / brake.pmdb / mesh>.
-- Rewrite <cad_report.json / tag_report.json / mesh_report.json + results.json>
+- Rewrite <cad_report.json> (Gates 2 and 3 are re-run by their stage script, which rewrites its own report)
   completely, with a "repair" block {k, failing_check, root_cause, change_made}
   and a fresh timing block.
 - HALT rule applies inside this commission (two tries). If still failing,

@@ -34,8 +34,10 @@ while producing wrong geometry (`references/tool-traps.md`).
 **2. Start the session: 2 calls.**
 - `ensure_ready` once. A cold launch takes 30 to 60 s. Do not call it twice
   during launch.
-- `verify_state`. Record the documents already open. They are not yours: never
-  close, save over or edit them.
+- Record the documents already open from `ensure_ready`'s `active_document`
+  field. `verify_state` errors with `NO_ACTIVE_DOCUMENT` when nothing is open:
+  read that as "no open document", not a failure. Documents already open are
+  not yours: never close, save over or edit them.
 - Write down `started_at` and start a running tool-call count for `timing`.
 - Done when: SolidWorks is visible and ready.
 
@@ -90,7 +92,9 @@ Extra features add `create_sketch`, `add_sketch_entities` and `extrude_feature`.
 Leave the saved part open. Do not close and reopen it.
 
 **7. Measure once per part.** Check every feature against its card with
-`result_geometry.volume`, because that read costs no call. Call
+`result_geometry.volume`, because that read costs no call. It is rounded to 2 to
+3 significant figures, so it is a sanity check only (it can read 0.5 % off on a
+correct pad); the binding check is the one `analyze_model` per part. Call
 `analyze_model('mass_properties')` **once**, after the last feature of the part.
 Print:
 ```
@@ -99,8 +103,10 @@ Print:
 ```
 Multiply m^3 by 1e9 to get mm^3 and m by 1e3 to get mm. There is no mass in the
 answer: mass = volume x PRD density. The vanes use `analyze_model('bodies')`
-instead, because they are 20 bodies. The z extents of all 28 bodies are
-measured once, at the STEP re-import (`sw-pads-calliper` step A8). Methods for
+instead, because they are 20 bodies. The z extents come from the extrude band on the
+data card, confirmed by the volume and centroid lines; the hat and calliper
+z faces are read with `analyze_model('faces', axis='[0,0,1]')` or the assembly
+face check (`sw-pads-calliper` A4). There is no STEP re-import. Methods for
 the other bbox components are in `references/measuring.md`.
 
 **8. Timeouts: inspect first, then retry.** Every call has a fixed 30 s ceiling.
@@ -148,7 +154,7 @@ record `cad_material: null` with the reason "mass from PRD density".
 - `references/frames-and-placement.md` - plane frames, offset planes,
   identity transforms.
 - `references/measuring.md` - bbox methods, face-area checks, sliver checks.
-- `references/step-export.md` - export, counting, re-import.
+- `references/step-export.md` - export and counting.
 
 ## Verification
 

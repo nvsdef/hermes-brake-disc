@@ -210,19 +210,19 @@ The service returns pint Quantities in SI. Convert once with `.m_as(...)`:
 - `modeler.prepare_tools.share_topology(...)` exists (24.2). Do not use it on
   the export design.
 
-## 14. Images
+## 14. Confirmed on 2026-11-02 (run FR330V-20261102-0936 and the fast-profile test)
 
-There is **no** screenshot or image-export call in the Geometry client. The only
-image path is `plot(screenshot=...)`, which is graphics-gated and raises
-`ImportError` here. Verified alternative, all installed in the venv: take
-`body.get_raw_tessellation()` triangles and draw them with matplotlib 3.11.1 on
-the `Agg` backend (no GPU, no window). For the 9 deg section, cut the triangles
-with `pyvista.PolyData(points, faces).slice(normal=..., origin=(0, 0, 0))`
-(a VTK filter, no rendering) and plot the lines in 2D. `pyvista.Plotter(off_screen=True)`
-with `.screenshot(filename)` exists in pyvista 0.48.4 but has not been run on
-this workstation: UNVERIFIED. A capture of the SpaceClaim window with
-`PIL.ImageGrab.grab(bbox=rect, all_screens=True)` worked in the predecessor
-after `SetProcessDpiAwareness(2)`. Details: `export-and-evidence.md`.
+- `launch_modeler_with_spaceclaim(version=261, hidden=False, transport_mode="wnua",
+  server_working_dir=..., timeout=300)`: boot measured 45 s and 115 s; 150 s is too
+  tight (RUN).
+- Body and face `bounding_box.min_corner` / `.max_corner` convert with
+  `np.asarray(...)` to metres (RUN).
+- `design.delete_body(body)`, `body.name = n`, `design.create_named_selection(n,
+  bodies=[b])` / `(n, faces=[...])`, `design.export_to_pmdb(folder)` (RUN).
+- `body.get_raw_tessellation()` keys equal `face.id.split('/')[-1]` on an assembly
+  import, not `face.id` (RUN).
+- STEP splits every full cylinder into two half faces; classify by surface type,
+  radius and plane z, never by face count (RUN).
 
 ## 15. Backend-version gates
 

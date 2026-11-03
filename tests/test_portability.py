@@ -168,3 +168,43 @@ class PortabilityTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class StageScriptTests(unittest.TestCase):
+    """The two vetted stage scripts (fast run profile, PRD section 6A)."""
+    SCRIPTS = ['spaceclaim_prep.py', 'fluent_fast.py']
+
+    def test_scripts_compile_and_take_the_run_folder_from_outside(self):
+        import py_compile
+        for n in self.SCRIPTS:
+            p = ROOT / 'scripts' / 'stages' / n
+            py_compile.compile(str(p), doraise=True)
+            text = p.read_text(encoding='utf-8')
+            self.assertIn('os.environ.get("BRAKE_RUN")', text, n)
+            self.assertNotRegex(text, r'FR330V-\d{8}', f'{n}: hard-coded run id')
+            self.assertIn('"BLOCKED"', text, f'{n}: must refuse to start beside another Ansys session')
+
+    def test_gate_numbers_are_prd_numbers(self):
+        prd = (ROOT / 'specs' / 'PRD.md').read_text(encoding='utf-8').replace(' ', '')
+        sc = (ROOT / 'scripts' / 'stages' / 'spaceclaim_prep.py').read_text(encoding='utf-8')
+        fl = (ROOT / 'scripts' / 'stages' / 'fluent_fast.py').read_text(encoding='utf-8')
+        for v in ('2647566.01', '2030484.53', '167037.60', '240205.78', '42997.28', '330.0'):
+            self.assertIn(v, sc)
+        for v in ('167037.60', '240205.78', '42997.28', '5864.31', '142865.51'):
+            self.assertIn(v, prd, v)
+        for v in ('5864.31', '2030484.53'):
+            self.assertIn(v, fl)
+        # materials in the Fluent script equal PRD MAT-01..03
+        for triple in ('(7200.0, 447.0, 52.0)', '(2500.0, 900.0, 1.2)', '(8030.0, 502.0, 16.3)'):
+            self.assertIn(triple, fl)
+        self.assertIn('"cheek_out", "cheek_in"', fl)   # only the two cheeks rotate
+
+    def test_fast_profile_defaults_match_prd_6a(self):
+        prd = (ROOT / 'specs' / 'PRD.md').read_text(encoding='utf-8')
+        self.assertIn('## 6A. Fast run profile', prd)
+        fl = (ROOT / 'scripts' / 'stages' / 'fluent_fast.py').read_text(encoding='utf-8')
+        for frag in ('"FAST_END_TIME_S", 1.0', '"FAST_DT_S", 0.05', '"FAST_ITERS", 3', '"FAST_WINDOW_STEPS", 4',
+                     '"FAST_MESH_MIN_MM", 4.0', '"cheek": 8.0', '"vane": 8.0', '"hat": 12.0'):
+            self.assertIn(frag, fl)
+        for frag in ('0 to 1.0 s', '0.05 s, 3 iterations per step', 'cheeks 8, vanes 8, hat 12 mm'):
+            self.assertIn(frag, prd)

@@ -42,5 +42,4 @@ repairs at most) or return it to the lead with the numbers.
 | Verification takes 30 to 40 minutes | Hundreds of report definitions created | you | Pool about 24 and mutate them |
 | A figure of a zone subset is a thumbnail | Auto-scale fits the whole-case grid plane | you | Restore a named view; set camera target and field |
 | Figure renders near-black | `camera/position` was set as well | you | Set target and field only |
-| PNG exists but is from an earlier run | `save_picture` does not overwrite and raises nothing | you | Delete first; record mtime |
 | Capture cropped to top-left of the screen | Process not DPI-aware | you | `SetProcessDpiAwareness(2)` before capture |

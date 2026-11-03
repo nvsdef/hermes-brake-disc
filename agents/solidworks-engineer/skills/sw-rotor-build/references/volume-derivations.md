@@ -93,8 +93,8 @@ Contacts that come out of this geometry (PRD section 4):
 | After | Expected total volume |
 |---|---|
 | boss of 20 extended profiles (r = 80 to 172), 12 mm | 1.901692e-4 m^3 |
-| single trim cut, card R6 (r > 165 and r < 95 at once) | 1.450325e-4 m^3 (7.251627e-6 each) |
-| (fallback) outer trim only | 1.723384e-4 m^3 |
+| outer trim, card R6a (r > 165) | 1.723384e-4 m^3 |
+| inner trim, card R6b (r < 95) | 1.450325e-4 m^3 (7.251627e-6 each) |
 
 Section area and centroid derivation: `vane-geometry.md`. Paste-ready cards: `sketch-data.md`.
 

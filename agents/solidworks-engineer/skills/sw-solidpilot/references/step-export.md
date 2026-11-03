@@ -64,7 +64,7 @@ Two counting traps the predecessor fell into:
 
 The predecessor's STEP was written in an inch unit context
 (`CONVERSION_BASED_UNIT('INCH')`) and imported at true scale. Do not try to fix
-it. Prove scale by measuring the re-import.
+it. Scale is proven at Gate 2: SpaceClaim measures the rotor OD and z extents.
 
 If the `MANIFOLD_SOLID_BREP` count is not 28:
 
@@ -78,43 +78,15 @@ If the `MANIFOLD_SOLID_BREP` count is not 28:
 Each of these is a CAD defect: find the part, repair it, re-export. Two repairs,
 then HALT.
 
-## 4. Re-import and measure
+## 4. No re-import in SolidWorks
 
-API idiom:
-
-```json
-{"file_path": "C:\\brake-runs\\<run-id>\\10_cad\\brake.step"}
-```
-
-`open_document` imports a STEP through the classic translator, which **flattens
-the assembly into one multibody part**. That is exactly what this check wants.
-Then `analyze_model('bodies')` returns one row per body: volume, area,
-centroid, face-index range.
-
-Match the 28 rows to PRD section 4 by signature, not by name:
-
-| Signature | Body |
-|---|---|
-| volume 5.717699e-4 m^3, centroid z = +11.000 mm | cheek_out |
-| volume 5.717699e-4 m^3, centroid z = -11.000 mm | cheek_in |
-| volume 7.251627e-6 m^3, centroid r = 130.154 mm, z = 0 | a vane; its angle atan2(cy, cx) = 17.917 + (k - 1) x 18 deg gives k |
-| volume 5.132043e-4 m^3, centroid z = +18.095 mm | hat |
-| volume 7.037168e-5 m^3, centroid z = +22.000 mm | outerpad |
-| volume 7.037168e-5 m^3, centroid z = -22.000 mm | innerpad |
-| volume 4.398230e-5 m^3, centroid z = +31.000 mm | bp_outer |
-| volume 4.398230e-5 m^3, centroid z = -31.000 mm | bp_inner |
-| volume 6.170815e-4 m^3, centroid (146.143, 0, +0.369) mm | calliper |
-
-Every body must match within the PRD tolerances (volume 1 %, centroid 0.1 mm).
-A body that matches its part-level measurement but not this re-import was moved
-by the assembly or the export: report it as a placement defect.
-
-Close the imported document without saving: `close_document(save=false)`. It is
-a check, not a deliverable. Do not save it anywhere.
-
-If the import times out, inspect with `verify_state` before retrying. If it
-cannot be done, report `step.reimport_check: null` with the reason; the STEP
-counts in section 3 still stand, but the row is OPEN, not PASS.
+Do not reopen `brake.step` in SolidWorks. Run 2 (2026-11-02) measured it: with
+`brake.SLDASM` open, `open_document` only re-activated the assembly (same title
+"brake"); after closing it, SolidWorks imported the STEP as a 9-part assembly,
+not a flattened multibody part, and the check cost about 22 calls for no new
+evidence. Placement is proven by the per-part centroids (parts are built at
+their global position, identity transforms) and, independently, by SpaceClaim's
+Gate 2 import, which re-measures all 28 bodies against `cad_report.json`.
 
 ## 5. What goes in `cad_report.json`
 
@@ -125,8 +97,7 @@ counts in section 3 still stand, but the row is OPEN, not PASS.
   "manifold_solid_count": 28,
   "product_count": 10,
   "ap_schema": "<FILE_SCHEMA as read>",
-  "unit_context": "<as read>",
-  "reimport_check": {"bodies": 28, "all_within_tolerance": true, "max_volume_delta_pct": 0.0, "max_centroid_delta_mm": 0.0}
+  "unit_context": "<as read>"
 }
 ```
 
