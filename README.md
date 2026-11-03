@@ -63,7 +63,7 @@ profile).
 
 ## Quick start (any workstation)
 ```powershell
-gh repo clone nvsdef/hermes-brake-disc; cd hermes-brake-disc
+git clone https://github.com/nvsdef/hermes-brake-disc.git; cd hermes-brake-disc
 powershell -ExecutionPolicy Bypass -File scripts\bootstrap_workstation.ps1   # SolidPilot + ansys-agent MCPs
 hermes profile create brake --clone                                            # Hermes only, once
 powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1

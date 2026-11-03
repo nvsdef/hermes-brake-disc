@@ -29,7 +29,7 @@ upstream commit and cloned by the bootstrap (`mcp/solidpilot/SOURCE.md`).
 
 ```powershell
 # 1. Get the package (anywhere; OneDrive is fine for the SOURCE, never for run output)
-gh repo clone nvsdef/hermes-brake-disc
+git clone https://github.com/nvsdef/hermes-brake-disc.git   # public; no GitHub login needed
 cd hermes-brake-disc
 
 # 2. Install the two MCP servers: SolidPilot -> C:\solidpilot (pinned commit, venv,

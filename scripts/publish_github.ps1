@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Publish this package to a PRIVATE GitHub repository (github.com) with the gh CLI.
+  Publish this package to GitHub (github.com) with the gh CLI; public by default (-Visibility private to keep it private).
 
 .DESCRIPTION
   Refuses to push when any of these holds:
@@ -8,7 +8,7 @@
     - the working tree has uncommitted changes
     - a file under .local/ (machine settings) is tracked
     - the unit tests fail (skip with -SkipTests)
-  Then either creates <Owner>/<Repo> as a private repo and pushes, or, when an
+  Then either creates <Owner>/<Repo> (public by default) and pushes, or, when an
   "origin" remote already exists, pushes the current branch to it.
 
 .EXAMPLE
@@ -19,6 +19,7 @@
 param(
     [string]$Owner = "",
     [string]$Repo = "hermes-brake-disc",
+    [ValidateSet('public', 'private')][string]$Visibility = 'public',
     [switch]$SkipTests
 )
 
@@ -65,12 +66,17 @@ if ($r.Code -eq 0 -and $r.Text.Trim()) {
 } else {
     $target = $Repo
     if ($Owner) { $target = "$Owner/$Repo" }
-    Write-Host "Creating PRIVATE github.com repo $target and pushing $branch ($head)"
+    Write-Host "Creating $($Visibility.ToUpper()) github.com repo $target and pushing $branch ($head)"
     $desc = 'FR-330V brake: Hermes lead + SolidWorks/SpaceClaim/Fluent specialist agents over MCP (PRD H1.2)'
-    if ((Invoke-Native { & gh repo create $target --private --source . --remote origin --push --description $desc } -Show).Code -ne 0) { Stop-Publish 'gh repo create failed.' }
+    if ((Invoke-Native { & gh repo create $target "--$Visibility" --source . --remote origin --push --description $desc } -Show).Code -ne 0) { Stop-Publish 'gh repo create failed.' }
 }
 $url = (Invoke-Native { & gh repo view --json url -q .url }).Text.Trim()
 $vis = (Invoke-Native { & gh repo view --json visibility -q .visibility }).Text.Trim()
+if ($vis -and $vis -ne $Visibility.ToUpper()) {
+    Write-Host "Changing visibility $vis -> $($Visibility.ToUpper())"
+    if ((Invoke-Native { & gh repo edit --visibility $Visibility --accept-visibility-change-consequences } -Show).Code -ne 0) { Stop-Publish 'gh repo edit --visibility failed.' }
+    $vis = (Invoke-Native { & gh repo view --json visibility -q .visibility }).Text.Trim()
+}
 Write-Host "Published: $url  visibility=$vis  commit=$head"
-if ($vis -ne 'PRIVATE') { Write-Host "WARNING: repository visibility is $vis, expected PRIVATE." -ForegroundColor Yellow }
+if ($vis -ne $Visibility.ToUpper()) { Write-Host "WARNING: repository visibility is $vis, expected $($Visibility.ToUpper())." -ForegroundColor Yellow }
 exit 0
