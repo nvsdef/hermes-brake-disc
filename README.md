@@ -24,7 +24,10 @@ profile).
 - The package is portable: the Hermes profile is rendered per workstation from
   `profile/`, and `scripts/preflight.ps1` checks a machine against the pinned
   environment. On 2026-11-02 it passed 29/29 checks against a freshly rendered
-  profile, with live MCP connections. **H1.2 has not yet been run end to end.**
+  profile, with live MCP connections.
+- **Fast profile run end to end on 2026-11-02** (run 3, Claude agents): all gates
+  PASS in 20.5 min including two repairs; about 13 to 14 min on a clean pass.
+  Not yet run under Hermes.
 
 ## Layout
 | Path | What |

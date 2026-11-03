@@ -1,5 +1,30 @@
 # Validation status
 
+## Run 3, fast run profile (2026-11-02, FR330V-20261102-2152) - complete_with_findings
+
+End-to-end with agents: Claude lead plus one Claude specialist per application,
+following `AGENTS.md`, the role SOULs and skills (package commits 572c388 to
+c4c8b8b). Wall time **20.5 min** (21:52:20 to 22:12:50), including two repair
+cycles that each found a package defect.
+
+| Gate | Owner | Result | Time |
+|---|---|---|---|
+| 0 duty cycle | lead | PASS: ts 3.540681 s, E 243 055.56 J, omega0 -84.175084 rad/s | < 1 min |
+| 1 CAD, build + assemble once | solidworks-engineer (SolidPilot) | PASS: 28/28 bodies (worst calliper -0.0015 %), 9 components, STEP 28 solids / 10 PRODUCT, 0 repairs | 6.5 min, 130 calls |
+| 2 SpaceClaim prep | spaceclaim-engineer (`spaceclaim_prep.py`) | attempt 1 FAIL (script KeyError on z-only vane boxes); repair PASS 15/15, areas 0.00 % | 56 s app time |
+| 3 mesh + full-stop solve | fluent-engineer (`fluent_fast.py`) | attempt 1 FAIL (stored-energy gate too strict: -1.41 J at the last 0.04 s); repair PASS 18/18 | 198 s app time (solve 60 s) |
+| 4 gate summary | lead | 37 dispositions; THM-01 to 04 NOT RUN (fast profile) | < 1 min |
+
+Gate 3 physics (coarse mesh, dt 0.05 s, whole stop): applied 243 280.8 J
+(100.09 % of E), stored 240 301.4 J (98.78 %); friction-face peaks 682 K rotor and
+878 K pad at 0.2 s, 384 K and 388 K at the end of the stop. Fluent was left open
+with the temperature contour.
+
+Clean-path estimate with both fixes in place: about 13 to 14 min (Gate 1 CAD
+6.5 min is now the bottleneck; Gates 2 and 3 about 1 and 3.5 min of application
+time plus agent overhead).
+
+
 ## Workstation readiness for H1.2 (2026-11-02) - PASS, no engineering run
 
 This was a package and live-MCP readiness pass. No geometry, mesh or solve was
