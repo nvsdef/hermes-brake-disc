@@ -11,6 +11,9 @@ assemble once (solidworks-engineer, SolidPilot MCP) -> SpaceClaim prep: delete t
 calliper, name bodies and faces, export PMDB (spaceclaim-engineer, runs
 `scripts/stages/spaceclaim_prep.py`) -> coarse mesh + short transient heat-up
 (fluent-engineer, runs `scripts/stages/fluent_fast.py`) -> gate summary (lead).**
+SpaceClaim and Fluent are **pre-opened** during the CAD stage: the
+solidworks-engineer's first call launches `scripts/stages/prewarm.py` as a
+detached job (its only Ansys call), and Gates 2 and 3 connect to those sessions.
 No drawings, no images, no report. Target: about 10 minutes of application time.
 
 ## 1. Who am I? Find your role, then load your role files before any other tool call

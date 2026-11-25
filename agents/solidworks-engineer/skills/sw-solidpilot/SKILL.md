@@ -31,7 +31,13 @@ tools this stage needs are listed in `references/tools-used.md`. Never call
 `save_body_as_part` or `add_mate`. Each one reported success on this brake
 while producing wrong geometry (`references/tool-traps.md`).
 
-**2. Start the session: 2 calls.**
+**2. Start the session: 3 calls.**
+- **Pre-open SpaceClaim and Fluent first** (fast run profile): one
+  fire-and-forget `submit_ansys_job` (cwd `<RUN>\00_lead`, job name `prewarm`)
+  whose script sets `BRAKE_RUN=<RUN>` and runs
+  `<PROJECT>\scripts\stages\prewarm.py` with `runpy.run_path`. Do not poll it.
+  It boots both applications (about 25 to 110 s) while you build, and Gates 2
+  and 3 connect to them. It is the only Ansys call this stage makes.
 - `ensure_ready` once. A cold launch takes 30 to 60 s. Do not call it twice
   during launch.
 - Record the documents already open from `ensure_ready`'s `active_document`

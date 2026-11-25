@@ -59,9 +59,24 @@ def write(status):
 
 rep["timing"] = {"started_at": rep["started_at"], "app_launches": {"spaceclaim_sessions": 0}}
 
-# ---- 0. one Ansys session at a time (Student) ----------------------------------------
+# ---- 0. pre-opened session (prewarm.py) and stray sessions ---------------------------
+# Licence check 2026-11-25: SpaceClaim and Fluent run together on Ansys Student, so a running
+# Fluent (the pre-opened one) is not a blocker. A SpaceClaim/Discovery we do not know is.
+PREWARM = STAGE / "prewarm_spaceclaim.json"; PREWARM_STOP = STAGE / "PREWARM_STOP"
+def prewarm_state():
+    try: return json.loads(PREWARM.read_text())
+    except Exception: return None
+pw = prewarm_state()
+if pw and pw.get("state") == "launching":                      # still booting: wait for it, not relaunch
+    t_wait = time.time()
+    while pw and pw.get("state") == "launching" and time.time() - t_wait < 300:
+        time.sleep(3); pw = prewarm_state()
+    rep["prewarm_wait_s"] = round(time.time() - t_wait, 1)
+use_prewarm = bool(pw and pw.get("state") == "ready" and pw.get("pid") and psutil.pid_exists(pw["pid"]))
+rep["prewarm"] = {"file_state": (pw or {}).get("state"), "used": use_prewarm}
+known = {pw["pid"]} if use_prewarm else set()
 busy = [(p.pid, p.name()) for p in psutil.process_iter(["name"])
-        if (p.info["name"] or "").lower() in ("spaceclaim.exe", "discovery.exe", "fluent.exe", "cx2610.exe", "fl2610.exe")]
+        if (p.info["name"] or "").lower() in ("spaceclaim.exe", "discovery.exe") and p.pid not in known]
 if busy:
     rep["blocked_by"] = busy; write("BLOCKED"); print("BLOCKED: Ansys processes already running", busy); sys.exit(3)
 
@@ -96,14 +111,22 @@ from ansys.geometry.core.designer import SurfaceType
 m = None; sc_pid = None; status = "FAIL"
 try:
     t = time.time()
-    before = {p.pid for p in psutil.process_iter()}
-    m = launch_modeler_with_spaceclaim(version=261, hidden=False, transport_mode="wnua",
-                                       server_working_dir=str(STAGE), client_log_level=logging.WARNING, timeout=300)
-    rep["timing"]["app_launches"]["spaceclaim_sessions"] = 1
-    new = [p.pid for p in psutil.process_iter(["name"]) if p.pid not in before and (p.info["name"] or "").lower() == "spaceclaim.exe"]
-    sc_pid = new[0] if new else None
-    rep["session"] = {"pid": sc_pid, "backend_version": str(m.client.backend_version)}
-    t = phase("launch", t)
+    if use_prewarm:                                           # connect to the session prewarm.py opened
+        from ansys.geometry.core import Modeler
+        m = Modeler(host=pw["host"], port=pw["port"], transport_mode=pw.get("transport_mode", "wnua"), timeout=20)
+        sc_pid = pw["pid"]
+        rep["session"] = {"pid": sc_pid, "backend_version": str(m.client.backend_version), "source": "prewarm",
+                          "prewarm_boot_s": pw.get("boot_s")}
+        t = phase("connect_prewarm", t)
+    else:
+        before = {p.pid for p in psutil.process_iter()}
+        m = launch_modeler_with_spaceclaim(version=261, hidden=False, transport_mode="wnua",
+                                           server_working_dir=str(STAGE), client_log_level=logging.WARNING, timeout=300)
+        rep["timing"]["app_launches"]["spaceclaim_sessions"] = 1
+        new = [p.pid for p in psutil.process_iter(["name"]) if p.pid not in before and (p.info["name"] or "").lower() == "spaceclaim.exe"]
+        sc_pid = new[0] if new else None
+        rep["session"] = {"pid": sc_pid, "backend_version": str(m.client.backend_version), "source": "launched"}
+        t = phase("launch", t)
 
     # ---- 1. import + scale --------------------------------------------------------------
     m.open_file(str(STEP))
@@ -220,7 +243,14 @@ except SystemExit as e:
 except Exception as e:
     rep["error"] = repr(e); rep["traceback"] = traceback.format_exc()[-2000:]; status = "FAIL"
 finally:
-    if m is not None:
+    if m is not None and use_prewarm:
+        try: m.client.close()                                 # disconnect; the prewarm job closes SpaceClaim
+        except Exception as e: rep["close_error"] = repr(e)
+        PREWARM_STOP.write_text(now())
+        for _ in range(30):                                   # wait for the holder to close it
+            if not (sc_pid and psutil.pid_exists(sc_pid)): break
+            time.sleep(1)
+    elif m is not None:
         try: m.close()
         except Exception as e: rep["close_error"] = repr(e)
     time.sleep(3)

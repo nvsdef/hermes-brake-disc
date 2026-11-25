@@ -9,7 +9,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 TEXT_SUFFIXES = {'.md', '.json', '.yaml', '.yml', '.ps1', '.py', '.txt'}
-PLACEHOLDERS = {'{{PACKAGE_ROOT}}', '{{ANSYS_AGENT_ROOT}}', '{{ANSYS_AGENT_PYTHON}}', '{{AWP_ROOT261}}'}
+PLACEHOLDERS = {'{{PACKAGE_ROOT}}', '{{ANSYS_AGENT_ROOT}}', '{{ANSYS_AGENT_PYTHON}}', '{{AWP_ROOT261}}',
+                '{{MODEL_NAME}}', '{{MODEL_BASE_URL}}', '{{MODEL_PROVIDER}}', '{{MODEL_KEY_ENV}}'}
 
 # SolidPilot tools OUTSIDE the include filter that the docs are allowed to name.
 # Each one was reviewed on 2026-11-02 and is mentioned only as "do not call"

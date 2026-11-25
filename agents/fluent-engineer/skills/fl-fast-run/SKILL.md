@@ -19,8 +19,13 @@ script, `scripts/stages/fluent_fast.py`, built from the calls that worked on run
 FR330V-20261102-0936. You check the preconditions, launch it once, judge
 `results.json` and route a failure. You do not rewrite the script during a run.
 
-Measured on 2026-11-02 for the first second: about **126 s** (launch 32, mesh
-34, mesh gate 15, setup 26, solve 14, contour 3). The full stop adds about 35 s.
+The script uses the Fluent that `prewarm.py` opened during Gate 1
+(`<RUN>\30_fluent\prewarm_fluent.json`, state `ready`; it waits up to 5 min if
+still `launching`), and otherwise launches its own. It returns `BLOCKED` only for
+a Fluent it does not know; a running SpaceClaim is fine (they run together on
+Ansys Student, checked 2026-11-25). `results.json -> prewarm.used` says which path
+ran. Measured for the full stop: about 190 to 320 s with its own launch (launch
+32 to 92 s); the pre-opened path saves the launch.
 
 ## Fast run profile (PRD section 6A)
 
@@ -91,7 +96,7 @@ started.
 
 | Symptom (from `results.json`) | Owner | What to return |
 |---|---|---|
-| `status: BLOCKED` | the user | the PIDs of the running Ansys processes |
+| `status: BLOCKED` | the user | the PIDs of the unknown Fluent processes (usually a window left from an earlier run) |
 | zones, pairs or volume gate fails | spaceclaim-engineer (tagging) or solidworks-engineer (geometry) | the failing row and the mesh sha256 |
 | energy gate fails | lead (package defect) | applied, stored, ratio and the history rows |
 | `error` / `traceback` set | lead (package defect) | the last traceback lines |

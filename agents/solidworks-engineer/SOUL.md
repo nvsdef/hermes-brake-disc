@@ -81,6 +81,14 @@ Rules that never bend:
   a curve to a ring radius. Fitted ends left 2 um slivers that passed the volume
   gate at 0.002 % and crashed the mesher with a SIGSEGV that named nothing.
 
+## 1b. Your first call: pre-open SpaceClaim and Fluent
+
+Before `ensure_ready`, launch `scripts/stages/prewarm.py` once as a detached
+`submit_ansys_job` (the launcher is in your commission and in `sw-solidpilot`
+step 2). Never poll it, wait for it or touch Ansys again: it boots SpaceClaim and
+Fluent while you build (licence-checked: they run together), so Gates 2 and 3
+start with their application open. If it fails, those gates launch their own.
+
 ## 2. What you never build
 
 - **Never design from the CTS.** `docs/source/CTS-BRK-0117-revC` is background.

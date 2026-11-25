@@ -4,6 +4,8 @@ Run it with the ansys-agent MCP:  submit_ansys_job(script_text=<launcher>, cwd=<
 where the launcher sets BRAKE_RUN and runs this file. The fluent-engineer launches it, polls
 job_status, and judges <RUN>\\30_fluent\\results.json. Fluent is LEFT OPEN at the end with a
 temperature contour on screen (that is the visual; no PNGs are written).
+If prewarm.py has pre-opened Fluent (<RUN>\\30_fluent\\prewarm_fluent.json state "ready"), this script
+connects to that session instead of launching one; otherwise it launches as before.
 
 Fast-mode settings (override with env vars; defaults chosen so meshing + solve take minutes):
   FAST_END_TIME_S   ts     simulated braking time; default the full stop from case.json (3.540681 s)
@@ -88,21 +90,43 @@ def num(res, key):
     raise KeyError(key)
 
 
+# ---- pre-opened session (prewarm.py) and stray sessions --------------------------------
+# Licence check 2026-11-25: SpaceClaim and Fluent run together on Ansys Student, so SpaceClaim is
+# not a blocker. A Fluent we did not pre-open is.
+FLUENT_PROCS = ("fluent.exe", "fl2610.exe", "cx2610.exe", "fl_mpi2610.exe")
+PREWARM = STAGE / "prewarm_fluent.json"
+def prewarm_state():
+    try: return json.loads(PREWARM.read_text())
+    except Exception: return None
+pw = prewarm_state()
+if pw and pw.get("state") == "launching":
+    t_wait = time.time()
+    while pw and pw.get("state") == "launching" and time.time() - t_wait < 300:
+        time.sleep(3); pw = prewarm_state()
+    rep["prewarm_wait_s"] = round(time.time() - t_wait, 1)
+pw_pids = set((pw or {}).get("pids") or [])
+use_prewarm = bool(pw and pw.get("state") == "ready" and pw_pids and any(psutil.pid_exists(x) for x in pw_pids))
+rep["prewarm"] = {"file_state": (pw or {}).get("state"), "used": use_prewarm}
 busy = [(p.pid, p.name()) for p in psutil.process_iter(["name"])
-        if (p.info["name"] or "").lower() in ("spaceclaim.exe", "discovery.exe", "fluent.exe", "cx2610.exe", "fl2610.exe")]
+        if (p.info["name"] or "").lower() in FLUENT_PROCS and not (use_prewarm and p.pid in pw_pids)]
 if busy:
     rep["blocked_by"] = busy; write("BLOCKED"); print("BLOCKED", busy); sys.exit(3)
 
 status = "FAIL"; s = None
-FLUENT_PROCS = ("fluent.exe", "fl2610.exe", "cx2610.exe", "fl_mpi2610.exe")
-before = {p.pid for p in psutil.process_iter()}
+before = {p.pid for p in psutil.process_iter()} - (pw_pids if use_prewarm else set())   # prewarm PIDs count as ours
 try:
     t = time.time()
-    s = pyfluent.launch_fluent(mode="meshing", precision="double", dimension=3, processor_count=4, ui_mode="gui",
-                               cwd=str(STAGE), product_version="26.1.0", cleanup_on_exit=False,
-                               start_transcript=False, start_timeout=300)
-    rep["timing"]["app_launches"]["fluent_sessions"] = 1
-    t = phase("launch", t)
+    if use_prewarm:
+        s = pyfluent.connect_to_fluent(server_info_file_name=pw["server_info"], start_transcript=False)
+        rep["session"] = {"source": "prewarm", "prewarm_boot_s": pw.get("boot_s"), "pids": sorted(pw_pids)}
+        t = phase("connect_prewarm", t)
+    else:
+        s = pyfluent.launch_fluent(mode="meshing", precision="double", dimension=3, processor_count=4, ui_mode="gui",
+                                   cwd=str(STAGE), product_version="26.1.0", cleanup_on_exit=False,
+                                   start_transcript=False, start_timeout=300)
+        rep["timing"]["app_launches"]["fluent_sessions"] = 1
+        rep["session"] = {"source": "launched"}
+        t = phase("launch", t)
 
     # ---- MESH (watertight workflow, task-object style; verified on run 2, 2026-11-02) ----
     wf = s.workflow

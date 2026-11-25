@@ -29,6 +29,12 @@ param(
     [string]$AnsysAgentRoot = "",
     [string]$AnsysAgentPython = "",
     [string]$AwpRoot = "",
+    # LLM endpoint for the Hermes profile (any OpenAI-compatible server). Defaults: NVIDIA inference API.
+    # Local example: -ModelBaseUrl http://localhost:8000/v1 -ModelName <served-model> -ModelProvider local -ModelKeyEnv LOCAL_LLM_API_KEY
+    [string]$ModelName = "nvidia/nvidia/nemotron-3-ultra-nvfp4",
+    [string]$ModelBaseUrl = "https://inference-api.nvidia.com/v1",
+    [string]$ModelProvider = "Inference-api.nvidia.com",
+    [string]$ModelKeyEnv = "HERMES_CUSTOM_INFERENCE_API_NVIDIA_COM_API_KEY",
     [switch]$CreateProfileDir
 )
 
@@ -93,6 +99,10 @@ $values = @{
     '{{PACKAGE_ROOT}}'     = (To-Fwd $PackageRoot)
     '{{ANSYS_AGENT_ROOT}}' = (To-Fwd $AnsysAgentRoot)
     '{{ANSYS_AGENT_PYTHON}}' = (To-Fwd $AnsysAgentPython)
+    '{{MODEL_NAME}}'       = $ModelName
+    '{{MODEL_BASE_URL}}'   = $ModelBaseUrl
+    '{{MODEL_PROVIDER}}'   = $ModelProvider
+    '{{MODEL_KEY_ENV}}'    = $ModelKeyEnv
     '{{AWP_ROOT261}}'      = (To-Fwd $AwpRoot)
 }
 function Render([string]$templatePath) {
@@ -147,6 +157,9 @@ Write-Host ("  config.yaml  sha256 {0}  {1}" -f (Sha256 $cfgPath), $cfgPath)
 Write-Host ("  SOUL.md      sha256 {0}  {1}" -f (Sha256 $soulPath), $soulPath)
 Write-Host ("  servers.json sha256 {0}  {1}" -f (Sha256 $srvPath), $srvPath)
 Write-Host ("  claude_mcp_servers.json        {0}  (merge into Claude Desktop / Cowork MCP settings)" -f $claudePath)
+if (-not [Environment]::GetEnvironmentVariable($ModelKeyEnv)) {
+    Write-Host ("  NOTE     env var {0} is not set; set it to the endpoint's API key (any non-empty string for a local server without auth)" -f $ModelKeyEnv) -ForegroundColor Yellow
+}
 Write-Host ""
 Write-Host "Next: powershell -ExecutionPolicy Bypass -File scripts\preflight.ps1 -McpTest"
 exit 0

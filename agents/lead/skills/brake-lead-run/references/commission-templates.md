@@ -146,11 +146,12 @@ End your final reply with one JSON block:
 **goal**
 
 ```
-ROLE: solidworks-engineer - Gate 1 CAD build for run <RUN_ID>. Build the nine
-FR-330V parts (28 solid bodies) at true global position in SolidWorks, assemble
-all 9 with identity transforms, measure every body against PRD section 4, export
-brake.step (25 solids / 9 occurrences = 28 bodies), and write cad_report.json in <RUN>\10_cad\. No drawings.
-Child <N> of <BUDGET>.
+ROLE: solidworks-engineer - Gate 1 CAD build for run <RUN_ID>. First launch the
+pre-open job (prewarm.py), then build the 6 FR-330V part files at true global
+position in SolidWorks, assemble 9 components (cheek_out, outerpad and bp_outer
+each twice, the second flipped 180 deg about +X), measure every part against PRD
+section 4, export brake.step (25 solids / 9 occurrences = 28 bodies), and write
+cad_report.json in <RUN>\10_cad\. No drawings. Child <N> of <BUDGET>.
 ```
 
 **context** = preamble A with `<ROLE>` = `solidworks-engineer`, `<SKILL LIST>` =
@@ -158,6 +159,16 @@ Child <N> of <BUDGET>.
 `<GATE>` = `Gate 1`, `<STAGE_FOLDER>` = `10_cad`, then:
 
 ```
+PRE-OPEN SPACECLAIM AND FLUENT (your FIRST tool call after reading your files,
+before ensure_ready): one fire-and-forget submit_ansys_job, cwd=<RUN>\00_lead,
+job_name prewarm, script_text exactly:
+  import os, runpy
+  os.environ["BRAKE_RUN"] = r"<RUN>"
+  runpy.run_path(r"<PROJECT>\scripts\stages\prewarm.py", run_name="__main__")
+Do not poll it or wait for it: it opens SpaceClaim and Fluent in the background
+while you build, and Gates 2 and 3 connect to them. This is the only Ansys call
+you make.
+
 INPUT
 - <RUN>\00_lead\case.json  sha256 <sha:case.json>  (for reference only; the
   vane hand and omega sign in it must agree with what you build)
@@ -292,7 +303,8 @@ script_text exactly:
   import os, runpy
   os.environ["BRAKE_RUN"] = r"<RUN>"
   runpy.run_path(r"<PROJECT>\scripts\stages\spaceclaim_prep.py", run_name="__main__")
-Poll job_status(job_id, wait_seconds=55). Expected about 60 to 120 s.
+Poll job_status(job_id, wait_seconds=55). Expected about 25 s with the pre-opened
+SpaceClaim (60 to 120 s if the script has to launch it).
 Do not edit, copy or replace the script. If it reports BLOCKED, return the PIDs.
 
 JUDGE <RUN>\20_spaceclaim\tag_report.json yourself (not the log): status PASS,

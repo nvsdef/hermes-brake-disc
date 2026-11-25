@@ -19,9 +19,9 @@ scripts and gates as the Hermes path. Run 4 took 12.3 min end to end.
 
 ## 2. Each run
 
-1. Close any SpaceClaim or Fluent window (the Student licence allows one
-   session; a Fluent window left open by the previous run holds it). SolidWorks
-   may stay open.
+1. Close any SpaceClaim or Fluent window left from a previous run (the Fluent
+   window each run leaves open, for example): pre-opening is skipped and the
+   stage scripts block on an unknown session. SolidWorks may stay open.
 2. Open a Cowork session on this package folder and give it access to
    `C:\brake-runs`.
 3. Paste `examples/prompt-claude.md`.
@@ -34,7 +34,8 @@ B3) plus the harness notes below, checking every gate's JSON itself.
 ## 3. Harness notes the lead adds to every brief
 
 - MCP tools are deferred in Claude: load them first with one ToolSearch call
-  (`select:mcp__solidpilot__...` for the 17 allowed SolidPilot tools;
+  (`select:mcp__solidpilot__...` for the 17 allowed SolidPilot tools, plus
+  `mcp__ansys-agent__submit_ansys_job` for the CAD child's pre-open launch;
   `select:mcp__ansys-agent__submit_ansys_job,mcp__ansys-agent__job_status` for
   the Ansys stages).
 - The Ansys server is named `ansys-agent` (Hermes calls it `ansys`); match tools

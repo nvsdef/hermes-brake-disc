@@ -12,7 +12,7 @@ EXPECTED_SKILLS = {
     'fluent-engineer': ['fl-fast-run'],
     '_shared': ['brake-handoff'],
 }
-STAGE_SCRIPTS = ['fluent_fast.py', 'spaceclaim_prep.py']
+STAGE_SCRIPTS = ['fluent_fast.py', 'prewarm.py', 'spaceclaim_prep.py']
 
 
 def skill_files():

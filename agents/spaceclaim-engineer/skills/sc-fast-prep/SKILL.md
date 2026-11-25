@@ -19,14 +19,19 @@ passed Gate 2 on run FR330V-20261102-0936. Your job is to check the
 preconditions, launch it once, judge its report against the PRD numbers, and
 route a failure to its owner. You do not rewrite the script during a run.
 
-Measured on 2026-11-02: the whole stage takes about **62 s** (SpaceClaim boot
-about 45 s, import 4 s, everything else under 5 s).
+Measured: about **23 s** when SpaceClaim was pre-opened by `prewarm.py` during
+Gate 1 (connect 0.7 s, import 6 s, export 4 s; 2026-11-25), about 60 to 110 s when
+the script has to launch SpaceClaim itself.
 
 ## What the script does
 
-1. Refuses to start (status `BLOCKED`, exit 3) if SpaceClaim, Discovery or
-   Fluent is already running. Ansys Student allows one session.
-2. Launches one visible SpaceClaim and imports `<RUN>\10_cad\brake.step`.
+1. Uses the SpaceClaim that `prewarm.py` opened during Gate 1
+   (`<RUN>\20_spaceclaim\prewarm_spaceclaim.json`, state `ready`; it waits up to
+   5 min if the state is still `launching`). Otherwise it launches one visible
+   SpaceClaim itself. It refuses to start (status `BLOCKED`, exit 3) only if a
+   SpaceClaim or Discovery it does not know is running. A running Fluent is fine:
+   SpaceClaim and Fluent run together on Ansys Student (checked 2026-11-25).
+2. Imports `<RUN>\10_cad\brake.step`.
 3. Checks the import: 28 solids, rotor OD 330 mm, z = -57 to +57 mm, total
    volume 2 647 566.01 mm^3 within 1 %.
 4. Identifies all 28 bodies by **measured volume and bounding box** against
@@ -46,7 +51,9 @@ about 45 s, import 4 s, everything else under 5 s).
    Gates, **before imprint**, 2 % each: wall-vent 167 037.60, wall-outer
    240 205.78, pad/backing exposed 42 997.28 mm^2.
 8. Exports `brake.pmdb` (a FOLDER holding `brake.pmdb`), hashes the inner file,
-   writes `tag_report.json`, closes SpaceClaim and records whether it is gone.
+   writes `tag_report.json`, closes SpaceClaim (a pre-opened one by writing
+   `PREWARM_STOP` for the pre-open job) and records whether it is gone.
+   `tag_report.json -> prewarm.used` says which path ran.
 
 No screenshots: images are descoped in the fast profile.
 

@@ -59,6 +59,29 @@ profile, pass `-ProfileDir "$env:TEMP\brake-test" -CreateProfileDir`.
 
 Then run with Hermes (section 5) or with Claude (`docs/RUN_WITH_CLAUDE.md`).
 
+## 1b. Hermes with a local model
+`install_profile.ps1` points the profile at any OpenAI-compatible endpoint
+(vLLM, Ollama, LM Studio, NIM, or the NVIDIA inference API by default):
+
+```powershell
+$env:LOCAL_LLM_API_KEY = "local"        # any non-empty string if the server needs no key
+powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1 `
+  -ModelBaseUrl "http://localhost:8000/v1" -ModelName "<served-model-name>" `
+  -ModelProvider "local" -ModelKeyEnv "LOCAL_LLM_API_KEY"
+```
+
+What the model must handle (measured with Claude, runs 3 to 6):
+- **Tool calling** with long JSON arguments: the CAD stage makes about 100
+  SolidPilot calls; sketch cards are pasted as JSON strings of up to 20 records.
+- **Context:** the CAD child reads its SOUL, three skills and two data-card files
+  (about 25k tokens) before its first call, and its context grows past 100k by
+  the end of the build. Use a context window of at least 128k.
+- The SpaceClaim and Fluent children only launch one script and read one JSON
+  file each (about 10 calls); the lead does Gate 0 arithmetic and reads the
+  three gate reports.
+If a local model struggles, the CAD stage is where it will show: watch the
+`cad_report.json` gate rows, not the model's summary.
+
 ## 2. What the profile contains, and why
 The single source is `profile/config.template.yaml`, a complete Hermes
 `config.yaml` with four placeholders: `{{PACKAGE_ROOT}}`, `{{ANSYS_AGENT_ROOT}}`,
@@ -117,8 +140,9 @@ Set in the template's `delegation:` and `agent:` blocks:
   third specialist in the September readiness test. `0` means unlimited.
 - `max_iterations` defaults to **250 turns per child**, too few for the
   SolidWorks build; the template sets 600.
-- `max_concurrent_children: 1` runs the stages one after another, which suits
-  Ansys Student (one session at a time).
+- `max_concurrent_children: 1` runs the stages one after another. SpaceClaim and
+  Fluent still start early: the solidworks-engineer launches `prewarm.py` as a
+  detached job at the start of Gate 1.
 
 ## 5. Launch
 Open a terminal **in this package folder**, so Hermes loads `AGENTS.md`, and run:

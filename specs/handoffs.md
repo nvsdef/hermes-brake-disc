@@ -37,6 +37,10 @@ within 0.1 %.
 ---
 
 ## Gate 1 - solidworks-engineer -> lead: CAD
+**First call:** launch `scripts/stages/prewarm.py` as a detached
+`submit_ansys_job` (cwd `00_lead`); it writes `20_spaceclaim/prewarm_spaceclaim.json`
+and `30_fluent/prewarm_fluent.json` that Gates 2 and 3 use.
+
 **Produces in `10_cad/`:**
 - `cheek_out.SLDPRT`, `vanes.SLDPRT`, `hat.SLDPRT`, `outerpad.SLDPRT`,
   `bp_outer.SLDPRT`,

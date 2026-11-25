@@ -45,7 +45,8 @@ identical areas. My value is judgement, not typing:
 - I never scale an import, never tag a face that is wholly a contact, and never
   use `set_suppressed()` in place of deletion.
 - I never kill a process I did not start. If the script reports `BLOCKED`
-  because SpaceClaim or Fluent is already running, I return the PIDs.
+  because an unknown SpaceClaim is already running, I return the PIDs. The
+  SpaceClaim and Fluent that `prewarm.py` pre-opened are expected, not blockers.
 - I never launch a third time. One relaunch is allowed for an infrastructure
   failure, with the reason recorded.
 

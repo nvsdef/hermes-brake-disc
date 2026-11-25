@@ -174,10 +174,11 @@ Get-Process | Where-Object { $_.ProcessName -match '^(fluent|fl\d+|cx\d+|SpaceCl
   Select-Object Id, ProcessName, StartTime
 ```
 
-Ansys Student allows one session, and SpaceClaim and Fluent share it. An open
-Fluent or SpaceClaim window holds the licence and the child's next launch dies
-(the predecessor saw error `10054`). If any process is listed, STOP and ask the
-user to close it. Do not kill it: it is not yours.
+SpaceClaim and Fluent can run together on Ansys Student (checked 2026-11-25), and
+`prewarm.py` opens both during Gate 1. A window left over from an EARLIER run is
+still a problem: `prewarm.py` then skips pre-opening (slower run), and the stage
+scripts treat an unknown Fluent or SpaceClaim as `BLOCKED`. If any process is
+listed, STOP and ask the user to close it. Do not kill it: it is not yours.
 
 Record the SolidWorks state the same way (`SLDWORKS`). SolidWorks being open is
 fine; the solidworks-engineer inventories its documents before mutating anything.

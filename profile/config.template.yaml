@@ -6,10 +6,10 @@
 # Lines marked "# BRAKE" differ from a default Hermes profile.
 # Fixed conventions (the skills hard-code these, so they are NOT placeholders):
 #   SolidPilot at C:/solidpilot   run output in C:/brake-runs
-model:
-  default: nvidia/nvidia/nemotron-3-ultra-nvfp4
-  provider: custom:Inference-api.nvidia.com
-  base_url: https://inference-api.nvidia.com/v1
+model:                                 # BRAKE: rendered from install_profile.ps1 -ModelName/-ModelBaseUrl/-ModelProvider/-ModelKeyEnv
+  default: "{{MODEL_NAME}}"
+  provider: "custom:{{MODEL_PROVIDER}}"
+  base_url: "{{MODEL_BASE_URL}}"
   api_mode: chat_completions
 database:
   journal_mode: wal
@@ -167,25 +167,14 @@ platform_toolsets:
     - hermes-teams
   google_chat:
     - hermes-google_chat
-custom_providers:
-  - name: Inference-api.nvidia.com
-    base_url: https://inference-api.nvidia.com/v1
-    key_env: HERMES_CUSTOM_INFERENCE_API_NVIDIA_COM_API_KEY
+custom_providers:                       # BRAKE: one provider, any OpenAI-compatible endpoint (NVIDIA API, vLLM, Ollama, LM Studio, ...)
+  - name: "{{MODEL_PROVIDER}}"
+    base_url: "{{MODEL_BASE_URL}}"
+    key_env: "{{MODEL_KEY_ENV}}"
     discover_models: true
     models:
-      nvidia/nvidia/nemotron-3-ultra: {}
-      nvidia/nvidia/nemotron-3-ultra-nvfp4: {}
-      nvidia/nvidia/nemotron-3-super-v3: {}
-      nvidia/nvidia/nemotron-3.5-super-text-preview: {}
-      nvidia/qwen/qwen3.5-122b-a10b: {}
-      nvidia/deepseek-ai/deepseek-v4-pro: {}
-      nvidia/moonshotai/kimi-k2.7: {}
-      nvidia/zai-org/glm-5.3: {}
-      nvidia/openai/gpt-oss-120b: {}
-      azure/anthropic/claude-opus-5-5: {}
-      azure/anthropic/claude-sonnet-5: {}
-      azure/openai/gpt-5.5: {}
-    models_discovered: false           # BRAKE: short list above; Hermes rediscovers the rest
+      "{{MODEL_NAME}}": {}
+    models_discovered: false
 mcp_servers:
   solidpilot:
     command: C:/solidpilot/.venv/Scripts/python.exe
