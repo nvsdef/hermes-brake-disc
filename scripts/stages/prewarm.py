@@ -39,6 +39,54 @@ if busy:
     say("SKIPPED", busy); sys.exit(0)            # stage scripts will see "skipped" and launch their own
 
 state = {}
+STEP = RUN / "10_cad" / "brake.step"
+
+def _focus(pids, minimize=False):
+    """Cosmetic window handling (never raises, never stops a stage): raise, or minimize
+    without activating, the visible top-level windows of these PIDs only.
+    Set BRAKE_WINDOW_FOCUS=0 to turn it off."""
+    if os.environ.get("BRAKE_WINDOW_FOCUS", "1") == "0":
+        return 0
+    try:
+        import win32con, win32gui, win32process
+        pids, hs = set(pids or []), []
+        def cb(h, _):
+            try:
+                if (win32gui.IsWindowVisible(h) and win32gui.GetWindowText(h) and win32gui.GetParent(h) == 0
+                        and win32process.GetWindowThreadProcessId(h)[1] in pids):
+                    hs.append(h)
+            except Exception:
+                pass
+            return True
+        win32gui.EnumWindows(cb, None)
+        for h in hs:
+            if minimize:
+                if not win32gui.IsIconic(h):
+                    win32gui.ShowWindow(h, win32con.SW_SHOWMINNOACTIVE)
+            else:
+                win32gui.ShowWindow(h, win32con.SW_RESTORE)
+                f = win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+                win32gui.SetWindowPos(h, win32con.HWND_TOPMOST, 0, 0, 0, 0, f)
+                win32gui.SetWindowPos(h, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, f)
+                try:
+                    win32gui.SetForegroundWindow(h)
+                except Exception:
+                    pass
+        return len(hs)
+    except Exception:
+        return 0
+
+
+def keep_minimized(pids, seconds=45):
+    """While SolidWorks builds, keep a freshly opened Ansys window out of the way: minimize it
+    for up to `seconds` after it is ready (it can re-show while it settles), stop once the STEP
+    exists (the next stage then raises its own window)."""
+    t = time.time()
+    while time.time() - t < seconds and not STEP.exists():
+        _focus(pids, minimize=True); time.sleep(1)
+
+def solidworks_pids():
+    return [p.pid for p in psutil.process_iter(["name"]) if (p.info["name"] or "").lower() == "sldworks.exe"]
 
 def spaceclaim():
     t = time.time(); write(SC_FILE, {"state": "launching", "launched_at": now()})
@@ -53,6 +101,7 @@ def spaceclaim():
         write(SC_FILE, {"state": "ready", "host": host, "port": int(port), "transport_mode": "wnua", "pid": state["sc_pid"],
                         "boot_s": round(time.time() - t, 1), "ready_at": now()})
         say("SPACECLAIM_READY", {"boot_s": round(time.time() - t, 1), "pid": state["sc_pid"]})
+        keep_minimized([state["sc_pid"]] if state["sc_pid"] else [])
     except Exception as e:
         write(SC_FILE, {"state": "failed", "error": repr(e)[:400], "at": now()}); say("SPACECLAIM_FAILED", repr(e)[:400])
 
@@ -69,11 +118,14 @@ def fluent():
         pids = [p.pid for p in psutil.process_iter(["name"]) if p.pid not in before and (p.info["name"] or "").lower() in FLUENT_PROCS]
         write(FL_FILE, {"state": "ready", "server_info": str(si), "pids": pids, "boot_s": round(time.time() - t, 1), "ready_at": now()})
         say("FLUENT_READY", {"boot_s": round(time.time() - t, 1), "pids": pids})
+        keep_minimized(pids)
     except Exception as e:
         write(FL_FILE, {"state": "failed", "error": repr(e)[:400], "at": now()}); say("FLUENT_FAILED", repr(e)[:400])
 
 threads = [threading.Thread(target=spaceclaim), threading.Thread(target=fluent)]
 [t.start() for t in threads]; [t.join() for t in threads]
+if not STEP.exists():
+    _focus(solidworks_pids())                   # SolidWorks (the agent's working app) back in front
 
 # hold SpaceClaim until Gate 2 is done with it (or the hold expires)
 t0 = time.time()

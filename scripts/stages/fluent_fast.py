@@ -31,6 +31,42 @@ MESH_SIZES = {"min": float(os.environ.get("FAST_MESH_MIN_MM", 4.0)), "max": 20.0
 
 import numpy as np
 import psutil
+
+def _focus(pids, minimize=False):
+    """Cosmetic window handling (never raises, never stops a stage): raise, or minimize
+    without activating, the visible top-level windows of these PIDs only.
+    Set BRAKE_WINDOW_FOCUS=0 to turn it off."""
+    if os.environ.get("BRAKE_WINDOW_FOCUS", "1") == "0":
+        return 0
+    try:
+        import win32con, win32gui, win32process
+        pids, hs = set(pids or []), []
+        def cb(h, _):
+            try:
+                if (win32gui.IsWindowVisible(h) and win32gui.GetWindowText(h) and win32gui.GetParent(h) == 0
+                        and win32process.GetWindowThreadProcessId(h)[1] in pids):
+                    hs.append(h)
+            except Exception:
+                pass
+            return True
+        win32gui.EnumWindows(cb, None)
+        for h in hs:
+            if minimize:
+                if not win32gui.IsIconic(h):
+                    win32gui.ShowWindow(h, win32con.SW_SHOWMINNOACTIVE)
+            else:
+                win32gui.ShowWindow(h, win32con.SW_RESTORE)
+                f = win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+                win32gui.SetWindowPos(h, win32con.HWND_TOPMOST, 0, 0, 0, 0, f)
+                win32gui.SetWindowPos(h, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, f)
+                try:
+                    win32gui.SetForegroundWindow(h)
+                except Exception:
+                    pass
+        return len(hs)
+    except Exception:
+        return 0
+
 import ansys.fluent.core as pyfluent
 from ansys.fluent.core import SurfaceFieldDataRequest, SurfaceDataType
 
@@ -119,6 +155,7 @@ try:
     if use_prewarm:
         s = pyfluent.connect_to_fluent(server_info_file_name=pw["server_info"], start_transcript=False)
         rep["session"] = {"source": "prewarm", "prewarm_boot_s": pw.get("boot_s"), "pids": sorted(pw_pids)}
+        _focus(pw_pids)                                       # pre-opened Fluent back on screen
         t = phase("connect_prewarm", t)
     else:
         s = pyfluent.launch_fluent(mode="meshing", precision="double", dimension=3, processor_count=4, ui_mode="gui",

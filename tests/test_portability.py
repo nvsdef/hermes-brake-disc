@@ -300,3 +300,32 @@ class RequirementsDocTests(unittest.TestCase):
                      'If you are an AI agent'):
             self.assertIn(item, self.doc)
         self.assertIn('REQUIREMENTS.md', (ROOT / 'README.md').read_text(encoding='utf-8'))
+
+
+class CadReportContractTests(unittest.TestCase):
+    """spaceclaim_prep.py must accept the Gate 1 bbox contract: full x/y/z boxes for some rows,
+    z-only rows (x/y null or absent) for others. Run FR330V-20261125-1659 crashed on x/y = null."""
+
+    def test_full_bbox_detection_accepts_null_and_missing_xy(self):
+        import numpy as np
+        src = (ROOT / 'scripts' / 'stages' / 'spaceclaim_prep.py').read_text(encoding='utf-8')
+        block = src[src.index('REF = {}'):src.index('def score')]
+        cad = {'bodies': [
+            {'name': 'vane_01', 'volume_m3': 7.25e-6, 'centroid_mm': [123.8, 40.0, 0],
+             'bbox_mm': {'x': [94.9, 143.1], 'y': [-3.9, 90.9], 'z': [-6, 6]}},
+            {'name': 'vane_02', 'volume_m3': 7.25e-6, 'centroid_mm': [111.2, 67.6, 0],
+             'bbox_mm': {'x': None, 'y': None, 'z': [-6, 6]}},
+            {'name': 'vane_03', 'volume_m3': 7.25e-6, 'centroid_mm': [91.0, 93.0, 0],
+             'bbox_mm': {'z': [-6, 6]}}]}
+        g = {'cad': cad, 'np': np}
+        exec(block, g)
+        self.assertTrue(g['REF']['vane_01']['full'])
+        self.assertFalse(g['REF']['vane_02']['full'])
+        self.assertFalse(g['REF']['vane_03']['full'])
+        self.assertIsNotNone(g['REF']['vane_02']['ang'])
+
+    def test_window_focus_is_cosmetic_and_switchable(self):
+        for name in ('prewarm.py', 'spaceclaim_prep.py', 'fluent_fast.py'):
+            src = (ROOT / 'scripts' / 'stages' / name).read_text(encoding='utf-8')
+            self.assertIn('def _focus(', src, name)
+            self.assertIn('BRAKE_WINDOW_FOCUS', src, name)

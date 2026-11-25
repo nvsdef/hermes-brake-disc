@@ -52,6 +52,8 @@ powershell -ExecutionPolicy Bypass -File scripts\install_profile.ps1
 # 5. Check the machine. Must end "0 FAIL". -McpTest (Hermes) starts each server once.
 powershell -ExecutionPolicy Bypass -File scripts\preflight.ps1 -McpTest
 ```
+`install_profile.ps1` and `preflight.ps1` take `-ProfileName` (default `brake`) to
+use another Hermes profile, for example an existing `cad-cae` profile.
 `install_profile.ps1` options: `-AnsysAgentRoot` (default the vendored
 `mcp\ansys-agent`), `-AnsysAgentPython` (default
 `C:\brake-tools\ansys-agent-venv\Scripts\python.exe`), `-AwpRoot` (default

@@ -16,6 +16,8 @@
 #>
 [CmdletBinding()]
 param(
+    # Hermes profile to render/check (e.g. -ProfileName cad-cae). Default: brake.
+    [string]$ProfileName = "brake",
     [string]$ProfileDir = "",
     [string]$AnsysAgentRoot = "",
     [string]$AnsysAgentPython = "",
@@ -33,8 +35,8 @@ $SolidPilotRoot = $envSpec.conventions.solidpilot_root.Replace('/', '\')
 $RunsRoot = $envSpec.conventions.runs_root.Replace('/', '\')
 
 if (-not $ProfileDir) {
-    if ($env:HERMES_HOME -and (Split-Path -Leaf $env:HERMES_HOME) -eq 'brake') { $ProfileDir = $env:HERMES_HOME }
-    else { $ProfileDir = Join-Path $env:LOCALAPPDATA 'hermes\profiles\brake' }
+    if ($env:HERMES_HOME -and (Split-Path -Leaf $env:HERMES_HOME) -eq $ProfileName) { $ProfileDir = $env:HERMES_HOME }
+    else { $ProfileDir = Join-Path $env:LOCALAPPDATA "hermes\profiles\$ProfileName" }
 }
 if (-not $AnsysAgentRoot) { $AnsysAgentRoot = Join-Path $PackageRoot 'mcp\ansys-agent' }       # vendored server source
 if (-not $AnsysAgentPython) {
@@ -149,7 +151,7 @@ if (Test-Path -LiteralPath $soul) {
 # 6. Optional live MCP connect --------------------------------------------------
 if ($McpTest -and $hermes) {
     foreach ($srv in @('solidpilot', 'ansys')) {
-        $res = Invoke-Native { & hermes -p brake mcp test $srv }
+        $res = Invoke-Native { & hermes -p $ProfileName mcp test $srv }
         $last = ($res.Text.Trim() -split "`n" | Select-Object -Last 1)
         if ($res.Code -eq 0) { Add-Row 'PASS' "hermes mcp test $srv" 'exit 0' "exit 0 : $last" }
         else { Add-Row 'FAIL' "hermes mcp test $srv" 'exit 0' "exit $($res.Code) : $last" }

@@ -158,3 +158,18 @@ an end-to-end run of about 10 minutes, no report, no images.
 49. **Local model under Hermes.** `install_profile.ps1` takes `-ModelName`,
     `-ModelBaseUrl`, `-ModelProvider` and `-ModelKeyEnv`, so a profile can point at
     a local OpenAI-compatible endpoint (`docs/SETUP.md` section 1b).
+50. **Gate 1 bbox contract is null-aware.** A `bbox_mm` row may carry full x, y and
+    z, or only z (x/y null or absent: vanes 02 to 20 when the CAD agent derives
+    boxes for vane_01 only). `spaceclaim_prep.py` treats a row as a full box only
+    when all three are non-null; z-only rows match on volume, z band and polar
+    angle. Found by run H1 (Hermes, GLM 5.3 Flash).
+51. **Pre-opened applications wait minimized.** `prewarm.py` minimizes SpaceClaim
+    and Fluent (only the PIDs it started) as each finishes opening, for up to 45 s
+    or until `brake.step` exists, then raises SolidWorks; `spaceclaim_prep.py` and
+    `fluent_fast.py` raise their pre-opened window when they connect. Cosmetic:
+    errors are ignored; `BRAKE_WINDOW_FOCUS=0` turns it off.
+52. **Hermes profile name is a parameter.** `install_profile.ps1` and
+    `preflight.ps1` take `-ProfileName` (default `brake`), so the package can be
+    installed into an existing profile such as `cad-cae` (contributed during the
+    first Hermes setup, together with the Workspace and Expertise sections of
+    `profile/SOUL.md`).

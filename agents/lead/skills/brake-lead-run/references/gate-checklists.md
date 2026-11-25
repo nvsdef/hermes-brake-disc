@@ -58,10 +58,10 @@ parts) through to SpaceClaim.
 
 | Check | Expected | How |
 |---|---|---|
-| `assembly.component_count` | **9** (cheek_out, cheek_in, vanes, hat, outerpad, innerpad, bp_outer, bp_inner, calliper) | read the key and the name list |
+| `assembly.component_count` | **9**, named by source file: `cheek_out-1`, `cheek_out-2` (= cheek_in), `vanes-1`, `hat-1`, `outerpad-1`, `outerpad-2` (= innerpad), `bp_outer-1`, `bp_outer-2` (= bp_inner), `calliper-1`. There is no `cheek_in`, `innerpad` or `bp_inner` component or file: they are the `-2` instances | read the key and the name list; map `-2` instances by their flip transform |
 | `step.manifold_solid_count` | **25** | read the key |
 | your own STEP text count | 25 `MANIFOLD_SOLID_BREP`, 7 `PRODUCT`, 9 `NEXT_ASSEMBLY_USAGE_OCCURRENCE` | text scan below |
-| `assembly.components` transforms | 6 identity, 3 = `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]` (cheek_in, innerpad, bp_inner) | read the key |
+| `assembly.components` transforms | 6 identity, 3 = `[1,0,0,0,-1,0,0,0,-1,0,0,0,1]` (`cheek_out-2`, `outerpad-2`, `bp_outer-2`) | read the key |
 
 API idiom (read-only text scan, PowerShell):
 
@@ -183,7 +183,8 @@ Gate 3.
 | `layer_material_readback` | `grey-iron` on both friction walls |
 | applied energy vs closed form | 2 % |
 | stored / applied | 90 to 110 % |
-| stored energy, rotor max T, pad max T | rise in every `history` window |
+| `history` rows | one per load window (19 for the default full stop: every 0.2 s to 3.4 s, then 3.5 s and 3.540681 s) |
+| stored energy (`history[].E_stored_J`) | rises in every window; a fall below 0.01 % in the last short window is allowed (convection outweighs the vanishing input). Temperatures (`T_face_*`, `T_max_*`) are NOT monotonic: they peak at about 0.2 s and fall as the power ramps down. That is the expected physics, not a FAIL |
 | `history[-1].t_s` | 3.540681 s (the full stop, default) |
 | `live_contour.displayed` | `true` (Fluent is left open on purpose) |
 | `timing.seconds`, `phase_seconds` | copied into `BUILD_STATE.timing.G3` |

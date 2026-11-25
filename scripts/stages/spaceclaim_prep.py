@@ -26,6 +26,42 @@ os.environ.setdefault("AWP_ROOT261", r"C:\Program Files\ANSYS Inc\ANSYS Student\
 import numpy as np
 import psutil
 
+def _focus(pids, minimize=False):
+    """Cosmetic window handling (never raises, never stops a stage): raise, or minimize
+    without activating, the visible top-level windows of these PIDs only.
+    Set BRAKE_WINDOW_FOCUS=0 to turn it off."""
+    if os.environ.get("BRAKE_WINDOW_FOCUS", "1") == "0":
+        return 0
+    try:
+        import win32con, win32gui, win32process
+        pids, hs = set(pids or []), []
+        def cb(h, _):
+            try:
+                if (win32gui.IsWindowVisible(h) and win32gui.GetWindowText(h) and win32gui.GetParent(h) == 0
+                        and win32process.GetWindowThreadProcessId(h)[1] in pids):
+                    hs.append(h)
+            except Exception:
+                pass
+            return True
+        win32gui.EnumWindows(cb, None)
+        for h in hs:
+            if minimize:
+                if not win32gui.IsIconic(h):
+                    win32gui.ShowWindow(h, win32con.SW_SHOWMINNOACTIVE)
+            else:
+                win32gui.ShowWindow(h, win32con.SW_RESTORE)
+                f = win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+                win32gui.SetWindowPos(h, win32con.HWND_TOPMOST, 0, 0, 0, 0, f)
+                win32gui.SetWindowPos(h, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, f)
+                try:
+                    win32gui.SetForegroundWindow(h)
+                except Exception:
+                    pass
+        return len(hs)
+    except Exception:
+        return 0
+
+
 T0 = time.time()
 sha = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
 now = lambda: time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -85,7 +121,7 @@ cad = json.loads(CAD.read_text())
 REF = {}
 for b in cad["bodies"]:
     bb = b["bbox_mm"]; c = [float(v) for v in b["centroid_mm"]]
-    full = all(k in bb for k in ("x", "y", "z"))
+    full = all(bb.get(k) is not None for k in ("x", "y", "z"))
     REF[b["name"]] = {"v": b["volume_m3"] * 1e9, "full": full, "z": np.array(bb["z"], float),
                       "ang": float(np.degrees(np.arctan2(c[1], c[0]))) if np.hypot(c[0], c[1]) > 1.0 else None,
                       "bb": np.array([bb["x"][0], bb["y"][0], bb["z"][0], bb["x"][1], bb["y"][1], bb["z"][1]]) if full else None}
@@ -117,6 +153,7 @@ try:
         sc_pid = pw["pid"]
         rep["session"] = {"pid": sc_pid, "backend_version": str(m.client.backend_version), "source": "prewarm",
                           "prewarm_boot_s": pw.get("boot_s")}
+        _focus([pw["pid"]])                                   # pre-opened SpaceClaim back on screen
         t = phase("connect_prewarm", t)
     else:
         before = {p.pid for p in psutil.process_iter()}

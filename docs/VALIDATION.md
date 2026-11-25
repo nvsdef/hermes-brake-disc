@@ -1,5 +1,35 @@
 # Validation status
 
+## Run H1, first Hermes run (2026-11-25, FR330V-20261125-1659) - complete_with_findings
+
+Hermes lead + 3 Hermes children on **GLM 5.3 Flash** (the first non-Claude run).
+16:59:42 to 17:23:18, **23.6 min**, every gate PASS; about 3 min of that was a
+Gate 2 package defect and its fix.
+
+| Step | Clock | Time |
+|---|---|---|
+| preflight + Gate 0 (lead) | 16:59:42 to 17:02:12 | 2.5 min |
+| Gate 1 CAD (agent, 82 calls), SpaceClaim / Fluent pre-opened 17:03:51 / 17:03:44 | 17:02:12 to 17:10:15 | 8.1 min |
+| Gate 2 attempt 1: crash, lead diagnosis + fix, retry (21 s app) | 17:10:30 to 17:15:53 | 5.4 min |
+| Gate 3 Fluent (219 s app, pre-opened) | 17:17:14 to 17:20:57 | 3.7 min |
+| lead checks and Gate 4 summary | to 17:23:18 | about 3 min |
+
+Findings, all fixed in the package after the run:
+- **F-1, package defect:** `spaceclaim_prep.py` decided "full bbox" by key presence;
+  this run's `cad_report.json` correctly carried `x`/`y` = null for vane_02 to
+  vane_20, so the script crashed before any SpaceClaim work. Fixed (null-aware
+  check, `tests/test_portability.py` CadReportContractTests) and re-proved on
+  this run's own STEP and report.
+- **Lead checklist:** expected components named `cheek_in`, `innerpad`, `bp_inner`
+  (they are `cheek_out-2`, `outerpad-2`, `bp_outer-2`), and expected face
+  temperatures to rise every window (they peak at about 0.2 s). Both gave false
+  FAILs the lead then corrected itself; `gate-checklists.md` now states both.
+- **Timing:** the CAD child wrote `finished_at` 22:21:30Z for a report saved at
+  17:10:15 local, so the lead reported about 48 min instead of 23.6. Timing now
+  must be read from the clock with its UTC offset.
+- **Stale budget:** the lead quoted "8 to 13 min" for Gate 1 from `specs/handoffs.md`;
+  updated.
+
 ## Run 7, repeat of run 6 from a clean start (2026-11-25, FR330V-20261125-1513) - complete
 
 Package commit 44ee08c. All Ansys sessions closed first. **13.5 min end to end**

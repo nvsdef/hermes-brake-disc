@@ -25,6 +25,8 @@
 #>
 [CmdletBinding()]
 param(
+    # Hermes profile to render/check (e.g. -ProfileName cad-cae). Default: brake.
+    [string]$ProfileName = "brake",
     [string]$ProfileDir = "",
     [string]$AnsysAgentRoot = "",
     [string]$AnsysAgentPython = "",
@@ -54,8 +56,8 @@ $RunsRoot = 'C:\brake-runs'
 
 # ---- resolve defaults ---------------------------------------------------------
 if (-not $ProfileDir) {
-    if ($env:HERMES_HOME -and (Split-Path -Leaf $env:HERMES_HOME) -eq 'brake') { $ProfileDir = $env:HERMES_HOME }
-    else { $ProfileDir = Join-Path $env:LOCALAPPDATA 'hermes\profiles\brake' }
+    if ($env:HERMES_HOME -and (Split-Path -Leaf $env:HERMES_HOME) -eq $ProfileName) { $ProfileDir = $env:HERMES_HOME }
+    else { $ProfileDir = Join-Path $env:LOCALAPPDATA "hermes\profiles\$ProfileName" }
 }
 if (-not $AnsysAgentRoot) { $AnsysAgentRoot = Join-Path $PackageRoot 'mcp\ansys-agent' }       # vendored server source
 if (-not $AnsysAgentPython) {
@@ -87,7 +89,7 @@ foreach ($c in $checks) {
 }
 if (-not (Test-Path -LiteralPath $ProfileDir)) {
     if ($CreateProfileDir) { New-Item -ItemType Directory -Force -Path $ProfileDir | Out-Null }
-    else { Write-Host "  MISSING  profile dir           $ProfileDir  (run: hermes profile create brake --clone)" -ForegroundColor Red; $missing += 'profile dir' }
+    else { Write-Host "  MISSING  profile dir           $ProfileDir  (run: hermes profile create $ProfileName --clone)" -ForegroundColor Red; $missing += 'profile dir' }
 }
 if ($missing.Count -gt 0) {
     Write-Host "STOP: $($missing.Count) input(s) missing: $($missing -join ', '). Nothing was written." -ForegroundColor Red

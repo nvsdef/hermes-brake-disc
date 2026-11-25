@@ -42,7 +42,8 @@ Full list, checks and setup order for people and agents: **`REQUIREMENTS.md`**.
   pre-opened during the CAD build): all gates PASS first time, no repairs, in
   **13.5 min** (CAD 7.6, SpaceClaim 0.9, Fluent 4.2, handoffs and checks the
   rest); 283k sub-agent tokens measured. Runs 4 to 7 all passed (12.3 to 15.0
-  min). Not yet run under Hermes.
+  min). **Hermes (GLM 5.3 Flash), run H1:** all gates PASS in 23.6 min, including a
+  Gate 2 package fix now in the repo.
 - **Self-contained:** both MCP servers install from this repo
   (`scripts/bootstrap_workstation.ps1`), see `docs/SETUP.md` section 1.
 

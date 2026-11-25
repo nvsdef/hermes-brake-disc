@@ -21,8 +21,11 @@ Every stage report carries `timing`: `started_at`, `finished_at`, `tool_calls`
 and `app_launches` (`solidworks_documents`, `spaceclaim_sessions`,
 `fluent_sessions`). The lead copies these into `BUILD_STATE.json`.
 
-Measured budget (2026-11-02): Gate 0 about 1 min, Gate 1 about 8 to 13 min
-(agentic CAD), Gate 2 about 1 min, Gate 3 about 2 min.
+Measured budget (2026-11-25, SpaceClaim and Fluent pre-opened): Gate 0 about
+1 min, Gate 1 about 6 to 8 min (agentic CAD), Gate 2 under 1 min (about 25 s of
+application time), Gate 3 about 4 min. Whole run about 13.5 min with Claude,
+about 21 min with GLM 5.3 Flash under Hermes (run FR330V-20261125-1659, without
+its Gate 2 package fix). Read every time from the clock; never estimate it.
 
 ---
 

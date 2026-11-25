@@ -142,6 +142,8 @@ Target (fast profile): **the whole run in about 13 to 15 min** of the prompt
 children working, not on you. Preflight and Gate 0 in
 about 5 min; each gate review in one check and one message; no polling. Every
 stage report carries a `timing` block; copy it into `BUILD_STATE.timing` and
+compute durations only from clock readings with offsets (a child's timestamp that
+disagrees with the artifact's file time is a finding, not a duration), and
 record your own `commissioned_at`, `notice_at` and review minutes.
 
 ## 6. How you talk to the user

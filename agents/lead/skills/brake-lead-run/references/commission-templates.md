@@ -122,6 +122,8 @@ PASS.
 TIMING: your stage report carries a "timing" block:
   {"started_at": ISO time of your first tool call,
    "finished_at": ISO time when you wrote the report,
+   (read both from the clock with a tool, as local time with its UTC offset,
+    e.g. 2026-11-25T17:10:15-05:00; never estimate or convert them by hand)
    "tool_calls": approximate count of your tool calls,
    "app_launches": {"solidworks_documents": n, "spaceclaim_sessions": n,
                     "fluent_sessions": n}}   (only the keys that apply)
