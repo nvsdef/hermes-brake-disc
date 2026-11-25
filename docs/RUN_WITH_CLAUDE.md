@@ -53,7 +53,7 @@ B3) plus the harness notes below, checking every gate's JSON itself.
 |---|---|
 | 0 duty cycle (lead) | under 1 min |
 | 1 CAD, 6 parts + 3 flipped instances (agent, SolidPilot) | about 5.5 min, about 105 calls |
-| 2 SpaceClaim prep (stage script) | about 1.5 min |
-| 3 Fluent mesh + full stop (stage script) | about 3.7 min |
+| 2 SpaceClaim prep (stage script) | about 1.5 min (0.8 min pre-opened, run 6) |
+| 3 Fluent mesh + full stop (stage script) | about 3.7 to 4.2 min |
 | lead checks | about 1 min |
-| **total** | **about 12 min** |
+| **total** | **about 12 to 14 min** (runs 4 and 6) |

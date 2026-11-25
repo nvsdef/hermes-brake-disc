@@ -146,3 +146,15 @@ an end-to-end run of about 10 minutes, no report, no images.
     on the target machine because it links the local SolidWorks interop.
     `scripts/bootstrap_workstation.ps1` installs both; `install_profile.ps1`
     renders Hermes and Claude MCP configs from them.
+48. **SpaceClaim and Fluent are pre-opened during Gate 1.** A licence test on
+    2026-11-25 showed both run together on Ansys Student (the earlier "one Ansys
+    session" rule was wrong). The CAD child's first call launches
+    `scripts/stages/prewarm.py` as a fire-and-forget Ansys job; it opens a visible
+    SpaceClaim and Fluent Meshing and writes their connection files. The stage
+    scripts connect to them (0.7 s) or fall back to their own launch, and block
+    only on a session they do not know. SpaceClaim is closed by Gate 2 through a
+    `PREWARM_STOP` file; Fluent stays open on the contour after Gate 3. Run 6:
+    Gate 2 47 s and Gate 3 0 launches; total 14.0 min, set by the CAD agent.
+49. **Local model under Hermes.** `install_profile.ps1` takes `-ModelName`,
+    `-ModelBaseUrl`, `-ModelProvider` and `-ModelKeyEnv`, so a profile can point at
+    a local OpenAI-compatible endpoint (`docs/SETUP.md` section 1b).

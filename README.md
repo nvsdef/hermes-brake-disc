@@ -27,7 +27,9 @@ profile).
   profile, with live MCP connections.
 - **Fast profile run end to end on 2026-11-02** (run 4, Claude agents): all gates
   PASS first time in **12.3 min** (CAD 5.4, SpaceClaim 1.4, Fluent 3.7).
-  Not yet run under Hermes.
+  Rerun 2026-11-25 with SpaceClaim and Fluent pre-opened during the CAD build
+  (run 6): all gates PASS in 14.0 min (CAD 6.8, SpaceClaim 0.8, Fluent 4.2);
+  about 283k sub-agent tokens measured. Not yet run under Hermes.
 - **Self-contained:** both MCP servers install from this repo
   (`scripts/bootstrap_workstation.ps1`), see `docs/SETUP.md` section 1.
 

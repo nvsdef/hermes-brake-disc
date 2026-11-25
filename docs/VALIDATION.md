@@ -1,5 +1,35 @@
 # Validation status
 
+## Run 6, fast profile with pre-opened SpaceClaim + Fluent (2026-11-25, FR330V-20261125-1456) - complete_with_findings
+
+Package commit 3832c80. Claude lead, one Claude specialist per application. The
+CAD child launched `prewarm.py` as its first call; SpaceClaim was ready at 14:57:25
+(25 s boot) and Fluent at 14:57:40 (40 s), both while SolidWorks was building.
+**14.0 min end to end** (14:56:24 to 15:10:23), every gate PASS on the first
+attempt, no repairs.
+
+| Gate | Result | Time | Sub-agent tokens (measured) |
+|---|---|---|---|
+| 0 duty cycle | PASS | < 1 min | lead |
+| 1 CAD, 6 parts + 3 flipped instances | PASS: 28/28 bodies, 9 components (6 identity, 3 flip), STEP 25 / 7 / 9 | 6.8 min, 102 calls | 157 323 |
+| 2 SpaceClaim prep (pre-opened, `prewarm.used` true) | PASS 15/15; areas within 0.00002 % | 20.3 s app (connect 0.7 s), 47 s with agent | 60 558 |
+| 3 Fluent, full stop (pre-opened, 0 launches) | PASS 18/18; stored/applied 98.78 %, applied 100.09 % of E | 224 s app (connect 0.7 s; mesh 63, gate 29, setup 47, solve 79), 254 s with agent | 64 666 |
+| 4 gate checks | lead | about 1 min | lead |
+
+Friction-face peaks (coarse mesh, dt 0.05 s): 684 K rotor, 881 K pad at 0.2 s; end
+of stop 385 K / 391 K. Fluent left open with the contour. Hashes: STEP db6db63a...,
+PMDB 53a25321..., results.json b95c853d....
+
+Finding: pre-opening removed the application launches from Gates 2 and 3 (SpaceClaim
+stage 85 s -> 47 s with agent). The total is set by the CAD agent, which varied
+5.4 to 6.8 min across runs 4 to 6 for the same 102 to 104 calls.
+
+## Run 5, fast profile, no pre-open (2026-11-24, FR330V-20261124-0946) - complete
+
+Package commit 24e65a2. All gates PASS, 15.0 min end to end. Ansys launches were
+slow that day (SpaceClaim 80 s, Fluent 92 s), which motivated pre-opening.
+Sub-agent tokens (measured): G1 143 344, G2 57 292, G3 63 361.
+
 ## Run 4, fast profile with flipped twins (2026-11-02, FR330V-20261102-2227) - complete_with_findings
 
 Package commit a82b8ca. Same harness as run 3 (Claude lead, one Claude
