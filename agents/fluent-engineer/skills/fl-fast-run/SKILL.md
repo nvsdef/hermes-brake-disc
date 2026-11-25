@@ -24,8 +24,9 @@ The script uses the Fluent that `prewarm.py` opened during Gate 1
 still `launching`), and otherwise launches its own. It returns `BLOCKED` only for
 a Fluent it does not know; a running SpaceClaim is fine (they run together on
 Ansys Student, checked 2026-11-25). `results.json -> prewarm.used` says which path
-ran. Measured for the full stop: about 190 to 320 s with its own launch (launch
-32 to 92 s); the pre-opened path saves the launch.
+ran. Measured for the full stop: about 220 s on the pre-opened Fluent (run 7,
+2026-11-25: connect 0.9 s, mesh 63, mesh gate 27, setup 48, solve 75 s), about
+190 to 320 s with its own launch (launch 32 to 92 s).
 
 ## Fast run profile (PRD section 6A)
 

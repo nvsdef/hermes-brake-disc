@@ -2,7 +2,8 @@
 
 Runs 3 and 4 (2026-11-02, `docs/VALIDATION.md`) were driven this way: Claude as
 the lead, one Claude sub-agent per application, the same SOULs, skills, stage
-scripts and gates as the Hermes path. Run 4 took 12.3 min end to end.
+scripts and gates as the Hermes path. Run 7 (the reference run, 2026-11-25) took
+13.5 min end to end.
 
 ## 1. One-time setup (after `docs/SETUP.md` section 1, steps 1 to 3)
 
@@ -47,13 +48,20 @@ B3) plus the harness notes below, checking every gate's JSON itself.
 - Children read only their SOUL and skill (and the data cards for CAD); the
   brief carries the gate numbers, so they need not read the PRD.
 
-## 4. Expected timing (run 4)
+## 4. Expected timing (run 7, 2026-11-25, FR330V-20261125-1513)
 
-| Gate | Time |
-|---|---|
-| 0 duty cycle (lead) | under 1 min |
-| 1 CAD, 6 parts + 3 flipped instances (agent, SolidPilot) | about 5.5 min, about 105 calls |
-| 2 SpaceClaim prep (stage script) | about 1.5 min (0.8 min pre-opened, run 6) |
-| 3 Fluent mesh + full stop (stage script) | about 3.7 to 4.2 min |
-| lead checks | about 1 min |
-| **total** | **about 12 to 14 min** (runs 4 and 6) |
+| Step | Clock | Time |
+|---|---|---|
+| 0 duty cycle (lead) | 15:13:23 | under 1 min |
+| 1 CAD, 6 parts + 3 flipped instances (agent, SolidPilot, 102 calls); SpaceClaim and Fluent pre-open in the background (ready 15:15:36 / 15:15:48) | 15:14:01 to 15:21:00 | 7.6 min (STEP written at 15:18:41) |
+| lead check G1, commission G2 | | about 40 s |
+| 2 SpaceClaim prep (stage script, pre-opened) | 15:21:42 to 15:22:08 | 26 s |
+| handoff to G3 | | about 40 s |
+| 3 Fluent mesh + full stop (stage script, pre-opened) | 15:22:47 to 15:26:32 | 3.7 min |
+| lead final check | 15:26:53 | |
+| **total** | | **13.5 min** |
+
+SpaceClaim sits open and idle from about 15:16 until Gate 2 starts: that is
+expected. About 4 min of the total is handoffs (the CAD agent writing its
+report after the export, gate checks, child start-up). Sub-agent tokens
+(measured): G1 158 010, G2 61 847, G3 63 467.

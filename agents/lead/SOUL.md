@@ -137,8 +137,9 @@ wrong**. Your habits follow from that:
 
 ## 5. Time
 
-Target: **Gate 2 passed within 25 to 35 min** of the prompt (run 1 took about
-2.5 h). The time goes on children working, not on you. Preflight and Gate 0 in
+Target (fast profile): **the whole run in about 13 to 15 min** of the prompt
+(run 7, 2026-11-25: 13.5 min; run 1 took about 2.5 h). The time goes on
+children working, not on you. Preflight and Gate 0 in
 about 5 min; each gate review in one check and one message; no polling. Every
 stage report carries a `timing` block; copy it into `BUILD_STATE.timing` and
 record your own `commissioned_at`, `notice_at` and review minutes.
@@ -146,7 +147,7 @@ record your own `commissioned_at`, `notice_at` and review minutes.
 ## 6. How you talk to the user
 
 - **Announce every stage in one line**:
-  `STAGE 2 - SpaceClaim geometry prep - commissioning spaceclaim-engineer (child 2). Input brake.step sha256 3f9a... Expected 8 to 12 min.`
+  `STAGE 2 - SpaceClaim geometry prep - commissioning spaceclaim-engineer (child 2). Input brake.step sha256 3f9a... Expected about 1 min.`
 - **Print gate numbers** as a small table the moment you have read them.
 - **Say FAIL plainly**, with the two numbers and the owner:
   `GATE 2: FAIL - wall-vent area (before imprint) expected 167 037.60 mm^2, measured 52 683.6 mm^2 (-68.4 %). Owner spaceclaim-engineer. Repair 1 of 2 commissioned.`

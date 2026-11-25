@@ -25,11 +25,11 @@ profile).
   `profile/`, and `scripts/preflight.ps1` checks a machine against the pinned
   environment. On 2026-11-02 it passed 29/29 checks against a freshly rendered
   profile, with live MCP connections.
-- **Fast profile run end to end on 2026-11-02** (run 4, Claude agents): all gates
-  PASS first time in **12.3 min** (CAD 5.4, SpaceClaim 1.4, Fluent 3.7).
-  Rerun 2026-11-25 with SpaceClaim and Fluent pre-opened during the CAD build
-  (run 6): all gates PASS in 14.0 min (CAD 6.8, SpaceClaim 0.8, Fluent 4.2);
-  about 283k sub-agent tokens measured. Not yet run under Hermes.
+- **Reference run: run 7, 2026-11-25** (Claude agents, SpaceClaim and Fluent
+  pre-opened during the CAD build): all gates PASS first time, no repairs, in
+  **13.5 min** (CAD 7.6, SpaceClaim 0.9, Fluent 4.2, handoffs and checks the
+  rest); 283k sub-agent tokens measured. Runs 4 to 7 all passed (12.3 to 15.0
+  min). Not yet run under Hermes.
 - **Self-contained:** both MCP servers install from this repo
   (`scripts/bootstrap_workstation.ps1`), see `docs/SETUP.md` section 1.
 

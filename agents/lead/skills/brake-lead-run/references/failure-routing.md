@@ -96,8 +96,8 @@ gate fails
 In an interactive session `delegate_task` returns at once and the child runs in
 the background. Hermes posts a completion notice when it finishes. Between the
 two you do nothing: tell the user the stage and expected duration, then end your
-turn. A CAD build takes about 12 to 18 min, geometry prep 8 to 12 min, and the
-Fluent commission longer.
+turn. Fast profile, measured on run 7 (2026-11-25): CAD build about 6 to 8 min,
+SpaceClaim prep about 1 min, Fluent mesh and full stop about 4 to 5 min.
 
 - At most one `delegate_task(action="list")` every 10 minutes, and only if the
   expected duration has clearly passed. Record each in

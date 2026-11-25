@@ -169,6 +169,14 @@ Do not poll it or wait for it: it opens SpaceClaim and Fluent in the background
 while you build, and Gates 2 and 3 connect to them. This is the only Ansys call
 you make.
 
+READ (before any tool call, and nothing else unless a check fails): your SOUL,
+the three SKILL.md files, sw-rotor-build/references/sketch-data.md,
+sw-pads-calliper/references/sketch-data.md and
+sw-pads-calliper/references/assembly-and-report.md (clearance definitions and
+the cad_report layout). SolidWorks may hold documents from the previous run
+(all saved, titles collide with yours): after ensure_ready, close them once with
+close_document(close_all=true, save=false).
+
 INPUT
 - <RUN>\00_lead\case.json  sha256 <sha:case.json>  (for reference only; the
   vane hand and omega sign in it must agree with what you build)
@@ -233,8 +241,10 @@ STEP from an assembly missing 5 parts)
   vanes, hat, outerpad, innerpad, bp_outer, bp_inner, calliper). If it lists
   fewer, insert the missing parts and re-read. Do not export an 8-component
   assembly.
-- AFTER export: count in brake.step with a text scan: MANIFOLD_SOLID_BREP 25,
-  PRODUCT (pattern "= ?PRODUCT ?\(") 7, NEXT_ASSEMBLY_USAGE_OCCURRENCE 9.
+- AFTER export: count in brake.step with a regex scan (SolidWorks writes a space
+  before the parenthesis, so a plain "NAME(" count returns 0):
+  r"\bMANIFOLD_SOLID_BREP\s*\(" 25, r"= ?PRODUCT ?\(" 7,
+  r"\bNEXT_ASSEMBLY_USAGE_OCCURRENCE\s*\(" 9.
   If either is wrong, fix the assembly and re-export (HALT rule applies).
 
 OUTPUT CONTRACT (specs/handoffs.md Gate 1), all in <RUN>\10_cad\
@@ -345,7 +355,8 @@ script_text exactly:
   runpy.run_path(r"<PROJECT>\scripts\stages\fluent_fast.py", run_name="__main__")
 (Fast profile defaults, PRD section 6A. Add FAST_* overrides only if this
 commission lists them: <none>.)
-Poll job_status(job_id, wait_seconds=55). Expected about 2 to 3 min. A
+Poll job_status(job_id, wait_seconds=55). Expected about 3.7 min (220 s on the
+pre-opened Fluent, run 7). A
 "ValueError: invalid literal for int()" traceback in stderr is a harmless
 pyfluent event-thread error. Do not edit, copy or replace the script.
 
