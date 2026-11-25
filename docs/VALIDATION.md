@@ -1,5 +1,20 @@
 # Validation status
 
+## Run 7, repeat of run 6 from a clean start (2026-11-25, FR330V-20261125-1513) - complete
+
+Package commit 44ee08c. All Ansys sessions closed first. **13.5 min end to end**
+(15:13:23 to 15:26:53), every gate PASS first time, no repairs. Pre-open boot was
+slower this time (SpaceClaim 94 s, Fluent 106 s) but still finished inside Gate 1.
+
+| Gate | Result | Time | Sub-agent tokens (measured) |
+|---|---|---|---|
+| 1 CAD | PASS 28/28, 9 components, STEP 25 / 7 / 9 | 7.6 min, 102 calls | 158 010 |
+| 2 SpaceClaim (pre-opened) | PASS 15/15 | 25.3 s app, 55 s with agent | 61 847 |
+| 3 Fluent (pre-opened) | PASS 18/18; stored/applied 98.84 % | 220 s app, 251 s with agent | 63 467 |
+
+Peaks 685 K rotor / 884 K pad at 0.2 s; end 385 K / 388 K. Fluent left open on the
+contour. Hashes: STEP 4679498c..., PMDB 4af90c19..., results.json ce6c2a0a....
+
 ## Run 6, fast profile with pre-opened SpaceClaim + Fluent (2026-11-25, FR330V-20261125-1456) - complete_with_findings
 
 Package commit 3832c80. Claude lead, one Claude specialist per application. The
