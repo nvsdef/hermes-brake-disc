@@ -8,14 +8,27 @@ specialist subagents, one per application:
 2. **spaceclaim-engineer** runs `scripts/stages/spaceclaim_prep.py`: deletes the
    calliper, names bodies and faces, exports a PMDB (about 1 min).
 3. **fluent-engineer** runs `scripts/stages/fluent_fast.py`: coarse mesh and the
-   first second of the braking stop, leaving Fluent open on the temperature
-   contour (about 2 min).
+   whole braking stop (3.54 s), leaving Fluent open on the temperature contour
+   (about 4 min).
 
 The lead derives the duty cycle, checks every gate against measured numbers and
 ends with a gate summary. No report and no images (PRD section 6A, fast run
 profile).
 
-**Status (revision H1.2, 2026-11-02):**
+## What you need
+
+Full list, checks and setup order for people and agents: **`REQUIREMENTS.md`**.
+
+- **You install (licensed, not in this repo):** SOLIDWORKS 2026, Ansys 2026 R1
+  (v261, Student is fine), Hermes or Claude Desktop/Cowork, and a model endpoint
+  with its API key in an environment variable.
+- **One `winget` command:** Git, Python 3.11, VS 2022 Build Tools (MSBuild).
+- **Installed from this repo** by `scripts/bootstrap_workstation.ps1`: the
+  SolidPilot MCP (SolidWorks; pinned upstream commit) and the ansys-agent MCP
+  (SpaceClaim and Fluent; vendored source), each from exact lock files.
+- **Ready when** `scripts/preflight.ps1 -McpTest` ends with `0 FAIL`.
+
+**Status (revision H1.2, updated 2026-11-25):**
 - `specs/PRD.md` is the single authority, with independently computed checksums
   for every body.
 - Run 1 (H1.1 profile) built all 28 CAD bodies to the checksums but stalled in
@@ -36,6 +49,7 @@ profile).
 ## Layout
 | Path | What |
 |---|---|
+| `REQUIREMENTS.md` | What a new workstation needs, how to check each item, setup order (for people and agents). |
 | `AGENTS.md` | Loaded into the lead **and every subagent**. Role table, ownership, evidence rules. |
 | `specs/PRD.md` | Geometry, checksums, duty cycle, analysis, requirements, deliverables. The only authority. |
 | `specs/handoffs.md` | Gate-by-gate artifact contracts and JSON keys. |
@@ -50,11 +64,11 @@ profile).
 | `mcp/*-tools.json` | Tool inventories (names and argument schemas) of the SolidPilot (46) and Ansys (10) servers. |
 | `profile/claude_mcp_servers.template.json` | MCP registration for Claude Desktop / Cowork. |
 | `scripts/bootstrap_workstation.ps1` | New machine: installs both MCP servers from the pins and locks. |
-| `docs/RUN_WITH_CLAUDE.md`, `examples/prompt-claude.md` | Running with Claude as the lead (how runs 3 and 4 ran). |
+| `docs/RUN_WITH_CLAUDE.md`, `examples/prompt-claude.md` | Running with Claude as the lead (how runs 3 to 7 ran). |
 | `scripts/stages/*.py` | The two vetted stage scripts (SpaceClaim prep, Fluent mesh + heat-up), launched by their specialist. |
 | `scripts/install_profile.ps1` | Renders the profile for this workstation. |
 | `scripts/preflight.ps1` | Read-only machine check: PASS/WARN/FAIL per item. |
-| `scripts/publish_github.ps1` | Pushes to a private GitHub repo after safety checks. |
+| `scripts/publish_github.ps1` | Pushes to GitHub (public by default) after safety checks. |
 | `scripts/mcp_client.py` | Diagnostic MCP client (not the run path). |
 | `examples/prompt.md` | The 3-line run prompt. |
 | `examples/readiness-prompt.md` | A check that all four roles start with their tools and skills. |
@@ -73,7 +87,7 @@ powershell -ExecutionPolicy Bypass -File scripts\preflight.ps1 -McpTest       # 
 ```
 Then either `hermes -p brake chat` from this folder and paste `examples/prompt.md`,
 or open Claude Cowork on this folder and paste `examples/prompt-claude.md`
-(`docs/RUN_WITH_CLAUDE.md`). Prerequisites and details: `docs/SETUP.md`.
+(`docs/RUN_WITH_CLAUDE.md`). Prerequisites: `REQUIREMENTS.md`; details: `docs/SETUP.md`.
 
 Run output goes to `C:\brake-runs\<run-id>\`. Tests:
 `C:/solidpilot/.venv/Scripts/python.exe -B -m unittest discover -s tests -v`.

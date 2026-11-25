@@ -274,3 +274,29 @@ class BundledMcpTests(unittest.TestCase):
         cfg = json.loads((ROOT / 'profile' / 'claude_mcp_servers.template.json').read_text(encoding='utf-8'))
         self.assertEqual(set(cfg['mcpServers']), {'solidpilot', 'ansys-agent'})
         self.assertEqual(cfg['mcpServers']['ansys-agent']['env']['ANSYS_RUNTIME_DIR'], 'C:/brake-runs/_ansys-runtime')
+
+
+class RequirementsDocTests(unittest.TestCase):
+    """REQUIREMENTS.md must agree with the pins the scripts actually use."""
+
+    def setUp(self):
+        self.doc = (ROOT / 'REQUIREMENTS.md').read_text(encoding='utf-8')
+        self.env = json.loads((ROOT / 'profile' / 'environment.json').read_text(encoding='utf-8'))
+        self.boot = (ROOT / 'scripts' / 'bootstrap_workstation.ps1').read_text(encoding='utf-8')
+
+    def test_pins_match_environment_and_bootstrap(self):
+        commit = re.search(r"\$SolidPilotCommit = '([0-9a-f]{40})'", self.boot).group(1)
+        self.assertEqual(commit, self.env['solidpilot']['observed_source_head'])
+        self.assertIn(commit[:8], self.doc)
+        for pkg, ver in self.env['ansys_agent']['required_packages'].items():
+            self.assertIn(f'{pkg} {ver}', self.doc)
+        self.assertIn(self.env['ansys']['awp_root_default'].replace('/', '\\'), self.doc)
+        self.assertIn('C:\\solidpilot', self.doc)
+        self.assertIn('C:\\brake-tools\\ansys-agent-venv', self.doc)
+
+    def test_names_every_part_and_the_ready_criterion(self):
+        for item in ('SOLIDWORKS 2026', 'Ansys 2026 R1', 'Hermes', 'Python 3.11', 'MSBuild',
+                     'bootstrap_workstation.ps1', 'install_profile.ps1', 'preflight.ps1', '0 FAIL',
+                     'If you are an AI agent'):
+            self.assertIn(item, self.doc)
+        self.assertIn('REQUIREMENTS.md', (ROOT / 'README.md').read_text(encoding='utf-8'))

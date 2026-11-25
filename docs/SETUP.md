@@ -5,6 +5,9 @@ default profile and global settings are not touched. The same steps work on any
 Windows workstation: nothing in the repository depends on the author's paths.
 
 ## 0. Prerequisites
+
+The complete checklist, with a check command for each item and rules for an agent
+doing the setup, is `REQUIREMENTS.md` at the repo root. Summary:
 These are pinned in `profile/environment.json`. `scripts/preflight.ps1` checks each one.
 
 | Item | Required | Notes |
